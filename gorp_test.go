@@ -24,7 +24,11 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/go-gorp/gorp/v3"
+=======
+	gorp "github.com/letsencrypt/borp"
+>>>>>>> c0090bd (Add go.mod and make tests import new path)
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
