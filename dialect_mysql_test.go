@@ -15,12 +15,7 @@ import (
 	"testing"
 	"time"
 
-<<<<<<< HEAD
-	"github.com/go-gorp/gorp/v3"
-	gorp "github.com/letsencrypt/borp"
-=======
-	borp "github.com/letsencrypt/borp"
->>>>>>> d45ae5e (s/gorp/borp/g)
+	"github.com/letsencrypt/borp"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"

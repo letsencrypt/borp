@@ -24,13 +24,8 @@ import (
 	"testing"
 	"time"
 
-<<<<<<< HEAD
-	"github.com/go-gorp/gorp/v3"
-=======
-	gorp "github.com/letsencrypt/borp"
->>>>>>> c0090bd (Add go.mod and make tests import new path)
-
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/letsencrypt/borp"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -39,7 +34,6 @@ var (
 	// verify interface compliance
 	_ = []borp.Dialect{
 		borp.SqliteDialect{},
-		borp.PostgresDialect{},
 		borp.MySQLDialect{},
 		borp.SqlServerDialect{},
 		borp.OracleDialect{},
@@ -2634,13 +2628,8 @@ func BenchmarkGorpCrud(b *testing.B) {
 	}
 }
 
-<<<<<<< HEAD
-func initDBMapBench(b *testing.B) *gorp.DbMap {
+func initDBMapBench(b *testing.B) *borp.DbMap {
 	dbmap := newDBMap(b)
-=======
-func initDbMapBench() *borp.DbMap {
-	dbmap := newDbMap()
->>>>>>> d45ae5e (s/gorp/borp/g)
 	dbmap.Db.Exec("drop table if exists invoice_test")
 	dbmap.AddTableWithName(Invoice{}, "invoice_test").SetKeys(true, "Id")
 	err := dbmap.CreateTables()
@@ -2650,13 +2639,8 @@ func initDbMapBench() *borp.DbMap {
 	return dbmap
 }
 
-<<<<<<< HEAD
-func initDBMap(t *testing.T) *gorp.DbMap {
+func initDBMap(t *testing.T) *borp.DbMap {
 	dbmap := newDBMap(t)
-=======
-func initDbMap() *borp.DbMap {
-	dbmap := newDbMap()
->>>>>>> d45ae5e (s/gorp/borp/g)
 	dbmap.AddTableWithName(Invoice{}, "invoice_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(InvoiceTag{}, "invoice_tag_test") //key is set via primarykey attribute
 	dbmap.AddTableWithName(AliasTransientField{}, "alias_trans_field_test").SetKeys(true, "id")
@@ -2696,13 +2680,8 @@ func initDbMap() *borp.DbMap {
 	return dbmap
 }
 
-<<<<<<< HEAD
-func initDBMapNulls(t *testing.T) *gorp.DbMap {
+func initDBMapNulls(t *testing.T) *borp.DbMap {
 	dbmap := newDBMap(t)
-=======
-func initDbMapNulls() *borp.DbMap {
-	dbmap := newDbMap()
->>>>>>> d45ae5e (s/gorp/borp/g)
 	dbmap.AddTable(TableWithNull{}).SetKeys(false, "Id")
 	err := dbmap.CreateTables()
 	if err != nil {
@@ -2711,7 +2690,6 @@ func initDbMapNulls() *borp.DbMap {
 	return dbmap
 }
 
-<<<<<<< HEAD
 type Logger interface {
 	Logf(format string, args ...any)
 }
@@ -2724,10 +2702,7 @@ func (l TestLogger) Printf(format string, args ...any) {
 	l.l.Logf(format, args...)
 }
 
-func newDBMap(l Logger) *gorp.DbMap {
-=======
-func newDbMap() *borp.DbMap {
->>>>>>> d45ae5e (s/gorp/borp/g)
+func newDBMap(l Logger) *borp.DbMap {
 	dialect, driver := dialectAndDriver()
 	dbmap := &borp.DbMap{Db: connect(driver), Dialect: dialect}
 	if debug {
@@ -2756,18 +2731,11 @@ func connect(driver string) *sql.DB {
 
 func dialectAndDriver() (borp.Dialect, string) {
 	switch os.Getenv("GORP_TEST_DIALECT") {
-<<<<<<< HEAD
 	case "mysql", "gomysql":
 		// NOTE: the 'mysql' driver used to use github.com/ziutek/mymysql, but that project
 		// seems mostly unmaintained recently.  We've dropped it from tests, at least for
 		// now.
-		return gorp.MySQLDialect{"InnoDB", "UTF8"}, "mysql"
-=======
-	case "mysql":
-		return borp.MySQLDialect{"InnoDB", "UTF8"}, "mymysql"
-	case "gomysql":
 		return borp.MySQLDialect{"InnoDB", "UTF8"}, "mysql"
->>>>>>> d45ae5e (s/gorp/borp/g)
 	case "postgres":
 		return borp.PostgresDialect{}, "postgres"
 	case "sqlite":

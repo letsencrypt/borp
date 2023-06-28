@@ -3,8 +3,7 @@ module github.com/letsencrypt/borp
 go 1.20
 
 require (
-	github.com/go-gorp/gorp/v3 v3.1.0
-	github.com/poy/onpar v1.1.2
+	github.com/poy/onpar v0.3.2
 	github.com/stretchr/testify v1.8.4
 )
 
