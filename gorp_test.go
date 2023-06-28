@@ -2736,8 +2736,6 @@ func dialectAndDriver() (borp.Dialect, string) {
 		// seems mostly unmaintained recently.  We've dropped it from tests, at least for
 		// now.
 		return borp.MySQLDialect{"InnoDB", "UTF8"}, "mysql"
-	case "postgres":
-		return borp.PostgresDialect{}, "postgres"
 	case "sqlite":
 		return borp.SqliteDialect{}, "sqlite3"
 	}
