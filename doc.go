@@ -2,10 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-// Package gorp provides a simple way to marshal Go structs to and from
+// Package borp provides a simple way to marshal Go structs to and from
 // SQL databases.  It uses the database/sql package, and should work with any
 // compliant database/sql driver.
 //
 // Source code and project home:
 // https://github.com/letsencrypt/borp
-package gorp
+package borp

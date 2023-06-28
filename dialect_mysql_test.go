@@ -5,7 +5,7 @@
 //go:build !integration
 // +build !integration
 
-package gorp_test
+package borp_test
 
 import (
 	"database/sql"
@@ -15,8 +15,12 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/go-gorp/gorp/v3"
 	gorp "github.com/letsencrypt/borp"
+=======
+	borp "github.com/letsencrypt/borp"
+>>>>>>> d45ae5e (s/gorp/borp/g)
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"
@@ -24,14 +28,14 @@ import (
 
 type testContext struct {
 	expect  expect.Expectation
-	dialect gorp.MySQLDialect
+	dialect borp.MySQLDialect
 }
 
 func TestMySQLDialect(t *testing.T) {
 	o := onpar.BeforeEach(onpar.New(t), func(t *testing.T) testContext {
 		return testContext{
 			expect.New(t),
-			gorp.MySQLDialect{
+			borp.MySQLDialect{
 				Engine:   "foo",
 				Encoding: "bar",
 			},

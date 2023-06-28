@@ -17,7 +17,7 @@ package main
 
 import (
     "database/sql"
-    "gopkg.in/gorp.v1"
+    "gopkg.in/borp.v1"
     _ "github.com/mattn/go-sqlite3"
     "log"
     "time"
@@ -99,14 +99,14 @@ func newPost(title, body string) Post {
     }
 }
 
-func initDb() *gorp.DbMap {
+func initDb() *borp.DbMap {
     // connect to db using standard Go database/sql API
     // use whatever database/sql driver you wish
     db, err := sql.Open("sqlite3", "/tmp/post_db.bin")
     checkErr(err, "sql.Open failed")
 
     // construct a gorp DbMap
-    dbmap := &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
+    dbmap := &borp.DbMap{Db: db, Dialect: borp.SqliteDialect{}}
 
     // add a table, setting the table name to 'posts' and
     // specifying that the Id property is an auto incrementing PK
@@ -180,7 +180,7 @@ Then create a mapper, typically you'd do this one time at app startup:
 db, err := sql.Open("mymysql", "tcp:localhost:3306*mydb/myuser/mypassword")
 
 // construct a gorp DbMap
-dbmap := &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{"InnoDB", "UTF8"}}
+dbmap := &borp.DbMap{Db: db, Dialect: borp.MySQLDialect{"InnoDB", "UTF8"}}
 
 // register the structs you wish to use with gorp
 // you can also use the shorter dbmap.AddTable() if you
@@ -424,13 +424,13 @@ Use hooks to update data before/after saving to the db. Good for timestamps:
 
 ```go
 // implement the PreInsert and PreUpdate hooks
-func (i *Invoice) PreInsert(s gorp.SqlExecutor) error {
+func (i *Invoice) PreInsert(s borp.SqlExecutor) error {
     i.Created = time.Now().UnixNano()
     i.Updated = i.Created
     return nil
 }
 
-func (i *Invoice) PreUpdate(s gorp.SqlExecutor) error {
+func (i *Invoice) PreUpdate(s borp.SqlExecutor) error {
     i.Updated = time.Now().UnixNano()
     return nil
 }
@@ -440,7 +440,7 @@ func (i *Invoice) PreUpdate(s gorp.SqlExecutor) error {
 //
 // Here's an example of a cascading delete
 //
-func (p *Person) PreDelete(s gorp.SqlExecutor) error {
+func (p *Person) PreDelete(s borp.SqlExecutor) error {
     query := "delete from invoice_test where PersonId=?"
     
     _, err := s.Exec(query, p.Id)
@@ -464,7 +464,7 @@ Full list of hooks that you can implement:
 
     All have the same signature.  for example:
 
-    func (p *MyStruct) PostUpdate(s gorp.SqlExecutor) error
+    func (p *MyStruct) PostUpdate(s borp.SqlExecutor) error
 
 ### Optimistic Locking
 
@@ -510,7 +510,7 @@ p1.LName = "Howard"
 
 // Raises error because p1.Version == 1, which is out of date
 count, err := dbmap.Update(p1)
-_, ok := err.(gorp.OptimisticLockError)
+_, ok := err.(borp.OptimisticLockError)
 if ok {
     // should reach this statement
 
