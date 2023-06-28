@@ -1,107 +1,14 @@
-# Go Relational Persistence
+# Boulder's Object Relational Persistence
 
-[![build status](https://github.com/go-gorp/gorp/actions/workflows/go.yml/badge.svg)](https://github.com/go-gorp/gorp/actions)
-[![issues](https://img.shields.io/github/issues/go-gorp/gorp.svg)](https://github.com/go-gorp/gorp/issues)
-[![Go Reference](https://pkg.go.dev/badge/github.com/go-gorp/gorp/v3.svg)](https://pkg.go.dev/github.com/go-gorp/gorp/v3)
+Once upon a time, there was [gorp](https://github.com/go-gorp/gorp/). Gorp was
+good, and Let's Encrypt's adopted it for Boulder's database persistence layer.
+The maintainers became busy with other projects, and gorp stopped getting
+updated. However, it's still very useful to Boulder, and there are a few tweaks
+we'd like to make for our own purposes, so we've forked it.
 
-### Update 2016-11-13: Future versions
-
-As many of the maintainers have become busy with other projects,
-progress toward the ever-elusive v2 has slowed to the point that we're
-only occasionally making progress outside of merging pull requests.
-In the interest of continuing to release, I'd like to lean toward a
-more maintainable path forward.
-
-For the moment, I am releasing a v2 tag with the current feature set
-from master, as some of those features have been actively used and
-relied on by more than one project.  Our next goal is to continue
-cleaning up the code base with non-breaking changes as much as
-possible, but if/when a breaking change is needed, we'll just release
-new versions.  This allows us to continue development at whatever pace
-we're capable of, without delaying the release of features or refusing
-PRs.
-
-## Introduction
-
-I hesitate to call gorp an ORM.  Go doesn't really have objects, at
-least not in the classic Smalltalk/Java sense.  There goes the "O".
-gorp doesn't know anything about the relationships between your
-structs (at least not yet).  So the "R" is questionable too (but I use
-it in the name because, well, it seemed more clever).
-
-The "M" is alive and well.  Given some Go structs and a database, gorp
-should remove a fair amount of boilerplate busy-work from your code.
-
-I hope that gorp saves you time, minimizes the drudgery of getting
-data in and out of your database, and helps your code focus on
-algorithms, not infrastructure.
-
-* Bind struct fields to table columns via API or tag
-* Support for embedded structs
-* Support for transactions
-* Forward engineer db schema from structs (great for unit tests)
-* Pre/post insert/update/delete hooks
-* Automatically generate insert/update/delete statements for a struct
-* Automatic binding of auto increment PKs back to struct after insert
-* Delete by primary key(s)
-* Select by primary key(s)
-* Optional trace sql logging
-* Bind arbitrary SQL queries to a struct
-* Bind slice to SELECT query results without type assertions
-* Use positional or named bind parameters in custom SELECT queries
-* Optional optimistic locking using a version column (for
-  update/deletes)
-
-## Installation
-
-Use `go get` or your favorite vendoring tool, using whichever import
-path you'd like.
-
-## Versioning
-
-We use semantic version tags.  Feel free to import through `gopkg.in`
-(e.g. `gopkg.in/gorp.v2`) to get the latest tag for a major version,
-or check out the tag using your favorite vendoring tool.
-
-Development is not very active right now, but we have plans to
-restructure `gorp` as we continue to move toward a more extensible
-system.  Whenever a breaking change is needed, the major version will
-be bumped.
-
-The `master` branch is where all development is done, and breaking
-changes may happen from time to time.  That said, if you want to live
-on the bleeding edge and are comfortable updating your code when we
-make a breaking change, you may use `github.com/go-gorp/gorp` as your
-import path.
-
-Check the version tags to see what's available.  We'll make a good
-faith effort to add badges for new versions, but we make no
-guarantees.
-
-## Supported Go versions
-
-This package is guaranteed to be compatible with the latest 2 major
-versions of Go.
-
-Any earlier versions are only supported on a best effort basis and can
-be dropped any time.  Go has a great compatibility promise. Upgrading
-your program to a newer version of Go should never really be a
-problem.
-
-## Migration guide
-
-#### Pre-v2 to v2
-Automatic mapping of the version column used in optimistic locking has
-been removed as it could cause problems if the type was not int. The
-version column must now explicitly be set with
-`tablemap.SetVersionCol()`.
-
-## Help/Support
-
-Use our [`gitter` channel](https://gitter.im/go-gorp/gorp).  We used
-to use IRC, but with most of us being pulled in many directions, we
-often need the email notifications from `gitter` to yell at us to sign
-in.
+We maintain this primarily for Boulder's own use, and intend to make some API
+breaking changes during 2023. You are welcome to use our fork if you like it, but
+we do not expect to spend a lot of time maintaining it for non-Boulder uses.
 
 ## Quickstart
 
@@ -145,9 +52,6 @@ func main() {
     log.Println("Rows updated:", count)
 
     // fetch one row - note use of "post_id" instead of "Id" since column is aliased
-    //
-    // Postgres users should use $1 instead of ? placeholders
-    // See 'Known Issues' below
     //
     err = dbmap.SelectOne(&p2, "select * from posts where post_id=?", p2.Id)
     checkErr(err, "SelectOne failed")
@@ -462,7 +366,7 @@ if reflect.DeepEqual(list[0], expected) {
 gorp provides a few convenience methods for selecting a single string or int64.
 
 ```go
-// select single int64 from db (use $1 instead of ? for postgresql)
+// select single int64 from db
 i64, err := dbmap.SelectInt("select count(*) from foo where blah=?", blahVal)
 
 // select single string from db:
@@ -677,7 +581,6 @@ interface that should be implemented per database vendor.  Dialects
 are provided for:
 
 * MySQL
-* PostgreSQL
 * sqlite3
 
 Each of these three databases pass the test suite.  See `gorp_test.go`
@@ -720,40 +623,6 @@ func customDriver() (*sql.DB, error) {
 ```
 
 ## Known Issues
-
-### SQL placeholder portability
-
-Different databases use different strings to indicate variable
-placeholders in prepared SQL statements.  Unlike some database
-abstraction layers (such as JDBC), Go's `database/sql` does not
-standardize this.
-
-SQL generated by gorp in the `Insert`, `Update`, `Delete`, and `Get`
-methods delegates to a Dialect implementation for each database, and
-will generate portable SQL.
-
-Raw SQL strings passed to `Exec`, `Select`, `SelectOne`, `SelectInt`,
-etc will not be parsed.  Consequently you may have portability issues
-if you write a query like this:
-
-```go 
-// works on MySQL and Sqlite3, but not with Postgresql err :=
-dbmap.SelectOne(&val, "select * from foo where id = ?", 30)
-```
-
-In `Select` and `SelectOne` you can use named parameters to work
-around this.  The following is portable:
-
-```go 
-err := dbmap.SelectOne(&val, "select * from foo where id = :id",
-map[string]interface{} { "id": 30})
-```
-
-Additionally, when using Postgres as your database, you should utilize
-`$1` instead of `?` placeholders as utilizing `?` placeholders when
-querying Postgres will result in `pq: operator does not exist`
-errors. Alternatively, use `dbMap.Dialect.BindVar(varIdx)` to get the
-proper variable binding for your dialect.
 
 ### time.Time and time zones
 
