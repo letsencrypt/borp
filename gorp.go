@@ -66,22 +66,23 @@ type TypeConverter interface {
 // See the DbMap function docs for each of the functions below for more
 // information.
 type SqlExecutor interface {
-	WithContext(ctx context.Context) SqlExecutor
-	Get(i interface{}, keys ...interface{}) (interface{}, error)
-	Insert(list ...interface{}) error
-	Update(list ...interface{}) (int64, error)
-	Delete(list ...interface{}) (int64, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Select(i interface{}, query string, args ...interface{}) ([]interface{}, error)
-	SelectInt(query string, args ...interface{}) (int64, error)
-	SelectNullInt(query string, args ...interface{}) (sql.NullInt64, error)
-	SelectFloat(query string, args ...interface{}) (float64, error)
-	SelectNullFloat(query string, args ...interface{}) (sql.NullFloat64, error)
-	SelectStr(query string, args ...interface{}) (string, error)
-	SelectNullStr(query string, args ...interface{}) (sql.NullString, error)
-	SelectOne(holder interface{}, query string, args ...interface{}) error
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
+	Get(ctx context.Context, i interface{}, keys ...interface{}) (interface{}, error)
+	Insert(ctx context.Context, list ...interface{}) error
+	Update(ctx context.Context, list ...interface{}) (int64, error)
+	Delete(ctx context.Context, list ...interface{}) (int64, error)
+	Select(ctx context.Context, i interface{}, query string, args ...interface{}) ([]interface{}, error)
+	SelectInt(ctx context.Context, query string, args ...interface{}) (int64, error)
+	SelectNullInt(ctx context.Context, query string, args ...interface{}) (sql.NullInt64, error)
+	SelectFloat(ctx context.Context, query string, args ...interface{}) (float64, error)
+	SelectNullFloat(ctx context.Context, query string, args ...interface{}) (sql.NullFloat64, error)
+	SelectStr(ctx context.Context, query string, args ...interface{}) (string, error)
+	SelectNullStr(ctx context.Context, query string, args ...interface{}) (sql.NullString, error)
+	SelectOne(ctx context.Context, holder interface{}, query string, args ...interface{}) error
+
+	// These method signatures are shared with *sql.DB
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
 // DynamicTable allows the users of gorp to dynamically
@@ -132,14 +133,14 @@ func argsString(args ...interface{}) string {
 
 // Calls the Exec function on the executor, but attempts to expand any eligible named
 // query arguments first.
-func maybeExpandNamedQueryAndExec(e SqlExecutor, query string, args ...interface{}) (sql.Result, error) {
+func maybeExpandNamedQueryAndExec(ctx context.Context, e SqlExecutor, query string, args ...interface{}) (sql.Result, error) {
 	dbMap := extractDbMap(e)
 
 	if len(args) == 1 {
 		query, args = maybeExpandNamedQuery(dbMap, query, args)
 	}
 
-	return exec(e, query, args...)
+	return exec(ctx, e, query, args...)
 }
 
 func extractDbMap(e SqlExecutor) *DbMap {
@@ -155,24 +156,20 @@ func extractDbMap(e SqlExecutor) *DbMap {
 // executor exposes the sql.DB and sql.Tx functions so that it can be used
 // on internal functions that need to be agnostic to the underlying object.
 type executor interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Prepare(query string) (*sql.Stmt, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	Query(query string, args ...interface{}) (*sql.Rows, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 }
 
-func extractExecutorAndContext(e SqlExecutor) (executor, context.Context) {
+func extractExecutor(e SqlExecutor) executor {
 	switch m := e.(type) {
 	case *DbMap:
-		return m.Db, m.ctx
+		return m.Db
 	case *Transaction:
-		return m.tx, m.ctx
+		return m.tx
 	}
-	return nil, nil
+	return nil
 }
 
 // maybeExpandNamedQuery checks the given arg to see if it's eligible to be used
@@ -363,7 +360,7 @@ func tableFor(m *DbMap, t reflect.Type, i interface{}) (*foundTable, error) {
 	return &foundTable{table: table}, nil
 }
 
-func get(m *DbMap, exec SqlExecutor, i interface{},
+func get(ctx context.Context, m *DbMap, exec SqlExecutor, i interface{},
 	keys ...interface{}) (interface{}, error) {
 
 	t, err := toType(i)
@@ -403,7 +400,7 @@ func get(m *DbMap, exec SqlExecutor, i interface{},
 		dest[x] = target
 	}
 
-	row := exec.QueryRow(plan.query, keys...)
+	row := exec.QueryRowContext(ctx, plan.query, keys...)
 	err = row.Scan(dest...)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -429,7 +426,7 @@ func get(m *DbMap, exec SqlExecutor, i interface{},
 	return v.Interface(), nil
 }
 
-func delete(m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {
+func delete(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {
 	count := int64(0)
 	for _, ptr := range list {
 		table, elem, err := m.tableForPointer(ptr, true)
@@ -450,7 +447,7 @@ func delete(m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {
 			return -1, err
 		}
 
-		res, err := exec.Exec(bi.query, bi.args...)
+		res, err := exec.ExecContext(ctx, bi.query, bi.args...)
 		if err != nil {
 			return -1, err
 		}
@@ -460,7 +457,7 @@ func delete(m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {
 		}
 
 		if rows == 0 && bi.existingVersion > 0 {
-			return lockError(m, exec, table.TableName,
+			return lockError(ctx, m, exec, table.TableName,
 				bi.existingVersion, elem, bi.keys...)
 		}
 
@@ -477,7 +474,7 @@ func delete(m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {
 	return count, nil
 }
 
-func update(m *DbMap, exec SqlExecutor, colFilter ColumnFilter, list ...interface{}) (int64, error) {
+func update(ctx context.Context, m *DbMap, exec SqlExecutor, colFilter ColumnFilter, list ...interface{}) (int64, error) {
 	count := int64(0)
 	for _, ptr := range list {
 		table, elem, err := m.tableForPointer(ptr, true)
@@ -498,7 +495,7 @@ func update(m *DbMap, exec SqlExecutor, colFilter ColumnFilter, list ...interfac
 			return -1, err
 		}
 
-		res, err := exec.Exec(bi.query, bi.args...)
+		res, err := exec.ExecContext(ctx, bi.query, bi.args...)
 		if err != nil {
 			return -1, err
 		}
@@ -509,7 +506,7 @@ func update(m *DbMap, exec SqlExecutor, colFilter ColumnFilter, list ...interfac
 		}
 
 		if rows == 0 && bi.existingVersion > 0 {
-			return lockError(m, exec, table.TableName,
+			return lockError(ctx, m, exec, table.TableName,
 				bi.existingVersion, elem, bi.keys...)
 		}
 
@@ -529,7 +526,7 @@ func update(m *DbMap, exec SqlExecutor, colFilter ColumnFilter, list ...interfac
 	return count, nil
 }
 
-func insert(m *DbMap, exec SqlExecutor, list ...interface{}) error {
+func insert(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}) error {
 	for _, ptr := range list {
 		table, elem, err := m.tableForPointer(ptr, false)
 		if err != nil {
@@ -583,7 +580,7 @@ func insert(m *DbMap, exec SqlExecutor, list ...interface{}) error {
 				return fmt.Errorf("gorp: cannot use autoincrement fields on dialects that do not implement an autoincrementing interface")
 			}
 		} else {
-			_, err := exec.Exec(bi.query, bi.args...)
+			_, err := exec.ExecContext(ctx, bi.query, bi.args...)
 			if err != nil {
 				return err
 			}
@@ -599,50 +596,26 @@ func insert(m *DbMap, exec SqlExecutor, list ...interface{}) error {
 	return nil
 }
 
-func exec(e SqlExecutor, query string, args ...interface{}) (sql.Result, error) {
-	executor, ctx := extractExecutorAndContext(e)
+func exec(ctx context.Context, e SqlExecutor, query string, args ...interface{}) (sql.Result, error) {
+	executor := extractExecutor(e)
 
-	if ctx != nil {
-		return executor.ExecContext(ctx, query, args...)
-	}
-
-	return executor.Exec(query, args...)
+	return executor.ExecContext(ctx, query, args...)
 }
 
-func prepare(e SqlExecutor, query string) (*sql.Stmt, error) {
-	executor, ctx := extractExecutorAndContext(e)
+func prepare(ctx context.Context, e SqlExecutor, query string) (*sql.Stmt, error) {
+	executor := extractExecutor(e)
 
-	if ctx != nil {
-		return executor.PrepareContext(ctx, query)
-	}
-
-	return executor.Prepare(query)
+	return executor.PrepareContext(ctx, query)
 }
 
-func queryRow(e SqlExecutor, query string, args ...interface{}) *sql.Row {
-	executor, ctx := extractExecutorAndContext(e)
+func queryRow(ctx context.Context, e SqlExecutor, query string, args ...interface{}) *sql.Row {
+	executor := extractExecutor(e)
 
-	if ctx != nil {
-		return executor.QueryRowContext(ctx, query, args...)
-	}
-
-	return executor.QueryRow(query, args...)
+	return executor.QueryRowContext(ctx, query, args...)
 }
 
-func query(e SqlExecutor, query string, args ...interface{}) (*sql.Rows, error) {
-	executor, ctx := extractExecutorAndContext(e)
+func query(ctx context.Context, e SqlExecutor, query string, args ...interface{}) (*sql.Rows, error) {
+	executor := extractExecutor(e)
 
-	if ctx != nil {
-		return executor.QueryContext(ctx, query, args...)
-	}
-
-	return executor.Query(query, args...)
-}
-
-func begin(m *DbMap) (*sql.Tx, error) {
-	if m.ctx != nil {
-		return m.Db.BeginTx(m.ctx, nil)
-	}
-
-	return m.Db.Begin()
+	return executor.QueryContext(ctx, query, args...)
 }

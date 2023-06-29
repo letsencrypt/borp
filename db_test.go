@@ -8,6 +8,7 @@
 package borp_test
 
 import (
+	"context"
 	"testing"
 )
 
@@ -114,6 +115,7 @@ AND field12 IN (:FieldIntList)
 	defer dropAndClose(dbmap)
 
 	err = dbmap.Insert(
+		context.Background(),
 		&dataFormat{
 			Field1:  123,
 			Field2:  "h",
@@ -171,7 +173,7 @@ AND field12 IN (:FieldIntList)
 	for _, tt := range tests {
 		t.Run(tt.description, func(t *testing.T) {
 			var dummy []int
-			_, err := dbmap.Select(&dummy, tt.query, tt.args...)
+			_, err := dbmap.Select(context.Background(), &dummy, tt.query, tt.args...)
 			if err != nil {
 				t.Fatal(err)
 			}

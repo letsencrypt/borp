@@ -5,6 +5,7 @@
 package borp
 
 import (
+	"context"
 	"reflect"
 )
 
@@ -96,8 +97,8 @@ type TargetQueryInserter interface {
 	InsertQueryToTarget(exec SqlExecutor, insertSql, idSql string, target interface{}, params ...interface{}) error
 }
 
-func standardInsertAutoIncr(exec SqlExecutor, insertSql string, params ...interface{}) (int64, error) {
-	res, err := exec.Exec(insertSql, params...)
+func standardInsertAutoIncr(ctx context.Context, exec SqlExecutor, insertSql string, params ...interface{}) (int64, error) {
+	res, err := exec.ExecContext(ctx, insertSql, params...)
 	if err != nil {
 		return 0, err
 	}

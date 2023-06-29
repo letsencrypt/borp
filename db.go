@@ -27,8 +27,6 @@ import (
 //	dialect := borp.MySQLDialect{"InnoDB", "UTF8"}
 //	dbmap := &borp.DbMap{Db: db, Dialect: dialect}
 type DbMap struct {
-	ctx context.Context
-
 	// Db handle to use with this map
 	Db *sql.DB
 
@@ -68,13 +66,6 @@ func (m *DbMap) dynamicTableMap() map[string]*TableMap {
 		m.tablesDynamic = make(map[string]*TableMap)
 	}
 	return m.tablesDynamic
-}
-
-func (m *DbMap) WithContext(ctx context.Context) SqlExecutor {
-	copy := &DbMap{}
-	*copy = *m
-	copy.ctx = ctx
-	return copy
 }
 
 func (m *DbMap) CreateIndex() error {
@@ -124,7 +115,7 @@ func (m *DbMap) createIndexImpl(dialect reflect.Type,
 		s.WriteString(fmt.Sprintf(" %s %s", m.Dialect.CreateIndexSuffix(), index.IndexType))
 	}
 	s.WriteString(";")
-	_, err := m.Exec(s.String())
+	_, err := m.ExecContext(context.TODO(), s.String())
 	return err
 }
 
@@ -141,7 +132,7 @@ func (t *TableMap) DropIndex(name string) error {
 				s.WriteString(fmt.Sprintf(" %s %s", t.dbmap.Dialect.DropIndexSuffix(), t.TableName))
 			}
 			s.WriteString(";")
-			_, e := t.dbmap.Exec(s.String())
+			_, e := t.dbmap.ExecContext(context.TODO(), s.String())
 			if e != nil {
 				err = e
 			}
@@ -384,7 +375,7 @@ func (m *DbMap) createTables(ifNotExists bool) error {
 	for i := range m.tables {
 		table := m.tables[i]
 		sql := table.SqlForCreate(ifNotExists)
-		_, err = m.Exec(sql)
+		_, err = m.ExecContext(context.TODO(), sql)
 		if err != nil {
 			return err
 		}
@@ -392,7 +383,7 @@ func (m *DbMap) createTables(ifNotExists bool) error {
 
 	for _, tbl := range m.dynamicTableMap() {
 		sql := tbl.SqlForCreate(ifNotExists)
-		_, err = m.Exec(sql)
+		_, err = m.ExecContext(context.TODO(), sql)
 		if err != nil {
 			return err
 		}
@@ -474,7 +465,7 @@ func (m *DbMap) dropTableImpl(table *TableMap, ifExists bool) (err error) {
 	if ifExists {
 		tableDrop = m.Dialect.IfTableExists(tableDrop, table.SchemaName, table.TableName)
 	}
-	_, err = m.Exec(fmt.Sprintf("%s %s;", tableDrop, m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
+	_, err = m.ExecContext(context.TODO(), fmt.Sprintf("%s %s;", tableDrop, m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
 	return err
 }
 
@@ -486,14 +477,14 @@ func (m *DbMap) TruncateTables() error {
 	var err error
 	for i := range m.tables {
 		table := m.tables[i]
-		_, e := m.Exec(fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
+		_, e := m.ExecContext(context.TODO(), fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
 		if e != nil {
 			err = e
 		}
 	}
 
 	for _, table := range m.dynamicTableMap() {
-		_, e := m.Exec(fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
+		_, e := m.ExecContext(context.TODO(), fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
 		if e != nil {
 			err = e
 		}
@@ -512,8 +503,8 @@ func (m *DbMap) TruncateTables() error {
 // before/after the INSERT statement if the interface defines them.
 //
 // Panics if any interface in the list has not been registered with AddTable
-func (m *DbMap) Insert(list ...interface{}) error {
-	return insert(m, m, list...)
+func (m *DbMap) Insert(ctx context.Context, list ...interface{}) error {
+	return insert(ctx, m, m, list...)
 }
 
 // Update runs a SQL UPDATE statement for each element in list.  List
@@ -526,8 +517,8 @@ func (m *DbMap) Insert(list ...interface{}) error {
 //
 // Returns an error if SetKeys has not been called on the TableMap
 // Panics if any interface in the list has not been registered with AddTable
-func (m *DbMap) Update(list ...interface{}) (int64, error) {
-	return update(m, m, nil, list...)
+func (m *DbMap) Update(ctx context.Context, list ...interface{}) (int64, error) {
+	return update(ctx, m, m, nil, list...)
 }
 
 // UpdateColumns runs a SQL UPDATE statement for each element in list.  List
@@ -542,8 +533,8 @@ func (m *DbMap) Update(list ...interface{}) (int64, error) {
 //
 // Returns an error if SetKeys has not been called on the TableMap
 // Panics if any interface in the list has not been registered with AddTable
-func (m *DbMap) UpdateColumns(filter ColumnFilter, list ...interface{}) (int64, error) {
-	return update(m, m, filter, list...)
+func (m *DbMap) UpdateColumns(ctx context.Context, filter ColumnFilter, list ...interface{}) (int64, error) {
+	return update(ctx, m, m, filter, list...)
 }
 
 // Delete runs a SQL DELETE statement for each element in list.  List
@@ -556,8 +547,8 @@ func (m *DbMap) UpdateColumns(filter ColumnFilter, list ...interface{}) (int64, 
 //
 // Returns an error if SetKeys has not been called on the TableMap
 // Panics if any interface in the list has not been registered with AddTable
-func (m *DbMap) Delete(list ...interface{}) (int64, error) {
-	return delete(m, m, list...)
+func (m *DbMap) Delete(ctx context.Context, list ...interface{}) (int64, error) {
+	return delete(ctx, m, m, list...)
 }
 
 // Get runs a SQL SELECT to fetch a single row from the table based on the
@@ -575,8 +566,8 @@ func (m *DbMap) Delete(list ...interface{}) (int64, error) {
 //
 // Returns an error if SetKeys has not been called on the TableMap
 // Panics if any interface in the list has not been registered with AddTable
-func (m *DbMap) Get(i interface{}, keys ...interface{}) (interface{}, error) {
-	return get(m, m, i, keys...)
+func (m *DbMap) Get(ctx context.Context, i interface{}, keys ...interface{}) (interface{}, error) {
+	return get(ctx, m, m, i, keys...)
 }
 
 // Select runs an arbitrary SQL query, binding the columns in the result
@@ -598,17 +589,17 @@ func (m *DbMap) Get(i interface{}, keys ...interface{}) (interface{}, error) {
 // and nil returned.
 //
 // i does NOT need to be registered with AddTable()
-func (m *DbMap) Select(i interface{}, query string, args ...interface{}) ([]interface{}, error) {
+func (m *DbMap) Select(ctx context.Context, i interface{}, query string, args ...interface{}) ([]interface{}, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return hookedselect(m, m, i, query, args...)
+	return hookedselect(ctx, m, m, i, query, args...)
 }
 
 // Exec runs an arbitrary SQL statement.  args represent the bind parameters.
 // This is equivalent to running:  Exec() using database/sql
-func (m *DbMap) Exec(query string, args ...interface{}) (sql.Result, error) {
+func (m *DbMap) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
@@ -617,79 +608,84 @@ func (m *DbMap) Exec(query string, args ...interface{}) (sql.Result, error) {
 		now := time.Now()
 		defer m.trace(now, query, args...)
 	}
-	return maybeExpandNamedQueryAndExec(m, query, args...)
+	return maybeExpandNamedQueryAndExec(ctx, m, query, args...)
 }
 
 // SelectInt is a convenience wrapper around the borp.SelectInt function
-func (m *DbMap) SelectInt(query string, args ...interface{}) (int64, error) {
+func (m *DbMap) SelectInt(ctx context.Context, query string, args ...interface{}) (int64, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return SelectInt(m, query, args...)
+	return SelectInt(ctx, m, query, args...)
 }
 
 // SelectNullInt is a convenience wrapper around the borp.SelectNullInt function
-func (m *DbMap) SelectNullInt(query string, args ...interface{}) (sql.NullInt64, error) {
+func (m *DbMap) SelectNullInt(ctx context.Context, query string, args ...interface{}) (sql.NullInt64, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return SelectNullInt(m, query, args...)
+	return SelectNullInt(ctx, m, query, args...)
 }
 
 // SelectFloat is a convenience wrapper around the borp.SelectFloat function
-func (m *DbMap) SelectFloat(query string, args ...interface{}) (float64, error) {
+func (m *DbMap) SelectFloat(ctx context.Context, query string, args ...interface{}) (float64, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return SelectFloat(m, query, args...)
+	return SelectFloat(ctx, m, query, args...)
 }
 
 // SelectNullFloat is a convenience wrapper around the borp.SelectNullFloat function
-func (m *DbMap) SelectNullFloat(query string, args ...interface{}) (sql.NullFloat64, error) {
+func (m *DbMap) SelectNullFloat(ctx context.Context, query string, args ...interface{}) (sql.NullFloat64, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return SelectNullFloat(m, query, args...)
+	return SelectNullFloat(ctx, m, query, args...)
 }
 
 // SelectStr is a convenience wrapper around the borp.SelectStr function
-func (m *DbMap) SelectStr(query string, args ...interface{}) (string, error) {
+func (m *DbMap) SelectStr(ctx context.Context, query string, args ...interface{}) (string, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return SelectStr(m, query, args...)
+	return SelectStr(ctx, m, query, args...)
 }
 
 // SelectNullStr is a convenience wrapper around the borp.SelectNullStr function
-func (m *DbMap) SelectNullStr(query string, args ...interface{}) (sql.NullString, error) {
+func (m *DbMap) SelectNullStr(ctx context.Context, query string, args ...interface{}) (sql.NullString, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return SelectNullStr(m, query, args...)
+	return SelectNullStr(ctx, m, query, args...)
 }
 
 // SelectOne is a convenience wrapper around the borp.SelectOne function
-func (m *DbMap) SelectOne(holder interface{}, query string, args ...interface{}) error {
+func (m *DbMap) SelectOne(ctx context.Context, holder interface{}, query string, args ...interface{}) error {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
 
-	return SelectOne(m, m, holder, query, args...)
+	return SelectOne(ctx, m, m, holder, query, args...)
 }
 
-// Begin starts a gorp Transaction
-func (m *DbMap) Begin() (*Transaction, error) {
+// BeginTx starts a borp Transaction. It uses database/sql.DB.BeginTx under the hood so the same
+// guarantees apply. https://pkg.go.dev/database/sql#DB.BeginTx
+//
+// > The provided context is used until the transaction is committed or rolled back. If the context
+// > is canceled, the sql package will roll back the transaction. Tx.Commit will return an error if
+// > the context provided to BeginTx is canceled.
+func (m *DbMap) BeginTx(ctx context.Context) (*Transaction, error) {
 	if m.logger != nil {
 		now := time.Now()
 		defer m.trace(now, "begin;")
 	}
-	tx, err := begin(m)
+	tx, err := m.Db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -740,12 +736,12 @@ func (m *DbMap) DynamicTableFor(tableName string, checkPK bool) (*TableMap, erro
 // Prepare creates a prepared statement for later queries or executions.
 // Multiple queries or executions may be run concurrently from the returned statement.
 // This is equivalent to running:  Prepare() using database/sql
-func (m *DbMap) Prepare(query string) (*sql.Stmt, error) {
+func (m *DbMap) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
 	if m.logger != nil {
 		now := time.Now()
 		defer m.trace(now, query, nil)
 	}
-	return prepare(m, query)
+	return m.Db.PrepareContext(ctx, query)
 }
 
 func tableOrNil(m *DbMap, t reflect.Type, name string) *TableMap {
@@ -793,7 +789,7 @@ func (m *DbMap) tableForPointer(ptr interface{}, checkPK bool) (*TableMap, refle
 	return t, elem, nil
 }
 
-func (m *DbMap) QueryRow(query string, args ...interface{}) *sql.Row {
+func (m *DbMap) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
 	}
@@ -802,10 +798,10 @@ func (m *DbMap) QueryRow(query string, args ...interface{}) *sql.Row {
 		now := time.Now()
 		defer m.trace(now, query, args...)
 	}
-	return queryRow(m, query, args...)
+	return queryRow(ctx, m, query, args...)
 }
 
-func (m *DbMap) Query(q string, args ...interface{}) (*sql.Rows, error) {
+func (m *DbMap) QueryContext(ctx context.Context, q string, args ...interface{}) (*sql.Rows, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&q, args...)
 	}
@@ -814,7 +810,7 @@ func (m *DbMap) Query(q string, args ...interface{}) (*sql.Rows, error) {
 		now := time.Now()
 		defer m.trace(now, q, args...)
 	}
-	return query(m, q, args...)
+	return query(ctx, m, q, args...)
 }
 
 func (m *DbMap) trace(started time.Time, query string, args ...interface{}) {
