@@ -10,6 +10,8 @@ We maintain this primarily for Boulder's own use, and intend to make some API
 breaking changes during 2023. You are welcome to use our fork if you like it, but
 we do not expect to spend a lot of time maintaining it for non-Boulder uses.
 
+In particular we maintain this to use with MariaDB 10.5+ and InnoDB.
+
 ## Quickstart
 
 ```go
@@ -17,7 +19,7 @@ package main
 
 import (
     "database/sql"
-    "gopkg.in/borp.v1"
+    "github.com/letsencrypt/borp"
     _ "github.com/mattn/go-sqlite3"
     "log"
     "time"
@@ -105,7 +107,7 @@ func initDb() *borp.DbMap {
     db, err := sql.Open("sqlite3", "/tmp/post_db.bin")
     checkErr(err, "sql.Open failed")
 
-    // construct a gorp DbMap
+    // construct a borp DbMap
     dbmap := &borp.DbMap{Db: db, Dialect: borp.SqliteDialect{}}
 
     // add a table, setting the table name to 'posts' and
@@ -153,7 +155,7 @@ type Person struct {
 // Example of using tags to alias fields to column names
 // The 'db' value is the column name
 //
-// A hyphen will cause gorp to skip this field, similar to the
+// A hyphen will cause borp to skip this field, similar to the
 // Go json package.
 //
 // This is equivalent to using the ColMap methods:
@@ -179,10 +181,10 @@ Then create a mapper, typically you'd do this one time at app startup:
 // use whatever database/sql driver you wish
 db, err := sql.Open("mymysql", "tcp:localhost:3306*mydb/myuser/mypassword")
 
-// construct a gorp DbMap
+// construct a borp DbMap
 dbmap := &borp.DbMap{Db: db, Dialect: borp.MySQLDialect{"InnoDB", "UTF8"}}
 
-// register the structs you wish to use with gorp
+// register the structs you wish to use with borp
 // you can also use the shorter dbmap.AddTable() if you
 // don't want to override the table name
 //
@@ -196,7 +198,7 @@ t3 := dbmap.AddTableWithName(Product{}, "product_test").SetKeys(true, "Id")
 
 ### Struct Embedding
 
-gorp supports embedding structs.  For example:
+borp supports embedding structs.  For example:
 
 ```go
 type Names struct {
@@ -213,12 +215,12 @@ es := &WithEmbeddedStruct{-1, Names{FirstName: "Alice", LastName: "Smith"}}
 err := dbmap.Insert(es)
 ```
 
-See the `TestWithEmbeddedStruct` function in `gorp_test.go` for a full example.
+See the `TestWithEmbeddedStruct` function in `borp_test.go` for a full example.
 
 ### Create/Drop Tables ###
 
 Automatically create / drop registered tables.  This is useful for unit tests
-but is entirely optional.  You can of course use gorp with tables created manually,
+but is entirely optional.  You can of course use borp with tables created manually,
 or with a separate migration tool (like [sql-migrate](https://github.com/rubenv/sql-migrate), [goose](https://bitbucket.org/liamstask/goose) or [migrate](https://github.com/mattes/migrate)).
 
 ```go
@@ -237,9 +239,9 @@ dbmap.DropTables()
 
 Optionally you can pass in a logger to trace all SQL statements.
 I recommend enabling this initially while you're getting the feel for what
-gorp is doing on your behalf.
+borp is doing on your behalf.
 
-Gorp defines a `GorpLogger` interface that Go's built in `log.Logger` satisfies.
+Borp defines a `GorpLogger` interface that Go's built in `log.Logger` satisfies.
 However, you can write your own `GorpLogger` implementation, or use a package such
 as `glog` if you want more control over how statements are logged.
 
@@ -319,7 +321,7 @@ var post Post
 err := dbmap.SelectOne(&post, "select * from post where id=?", id)
 ```
 
-Want to do joins?  Just write the SQL and the struct. gorp will bind them:
+Want to do joins?  Just write the SQL and the struct. Borp will bind them:
 
 ```go
 // Define a type for your join
@@ -363,7 +365,7 @@ if reflect.DeepEqual(list[0], expected) {
 
 #### SELECT string or int64
 
-gorp provides a few convenience methods for selecting a single string or int64.
+Borp provides a few convenience methods for selecting a single string or int64.
 
 ```go
 // select single int64 from db
@@ -436,7 +438,7 @@ func (i *Invoice) PreUpdate(s borp.SqlExecutor) error {
 }
 
 // You can use the SqlExecutor to cascade additional SQL
-// Take care to avoid cycles. gorp won't prevent them.
+// Take care to avoid cycles. Borp won't prevent them.
 //
 // Here's an example of a cascading delete
 //
@@ -470,14 +472,14 @@ Full list of hooks that you can implement:
 
 #### Note that this behaviour has changed in v2. See [Migration Guide](#migration-guide).
 
-gorp provides a simple optimistic locking feature, similar to Java's
+Borp provides a simple optimistic locking feature, similar to Java's
 JPA, that will raise an error if you try to update/delete a row whose
 `version` column has a value different than the one in memory.  This
 provides a safe way to do "select then update" style operations
 without explicit read and write locks.
 
 ```go
-// Version is an auto-incremented number, managed by gorp
+// Version is an auto-incremented number, managed by borp
 // If this property is present on your struct, update
 // operations will be constrained
 //
@@ -571,19 +573,19 @@ MariaDB [test]> show create table Account;
 
 ## Database Drivers
 
-gorp uses the Go 1 `database/sql` package.  A full list of compliant
+borp uses the Go 1 `database/sql` package.  A full list of compliant
 drivers is available here:
 
 http://code.google.com/p/go-wiki/wiki/SQLDrivers
 
-Sadly, SQL databases differ on various issues. gorp provides a Dialect
+Sadly, SQL databases differ on various issues. borp provides a Dialect
 interface that should be implemented per database vendor.  Dialects
 are provided for:
 
 * MySQL
 * sqlite3
 
-Each of these three databases pass the test suite.  See `gorp_test.go`
+Each of these three databases pass the test suite.  See `borp_test.go`
 for example DSNs for these three databases.
 
 Support is also provided for:
@@ -626,7 +628,7 @@ func customDriver() (*sql.DB, error) {
 
 ### time.Time and time zones
 
-gorp will pass `time.Time` fields through to the `database/sql`
+borp will pass `time.Time` fields through to the `database/sql`
 driver, but note that the behavior of this type varies across database
 drivers.
 
@@ -662,13 +664,6 @@ Valid `GORP_TEST_DIALECT` values are: "mysql"(for mymysql),
 "gomysql"(for go-sql-driver), "postgres", "sqlite" See the
 `test_all.sh` script for examples of all 3 databases.  This is the
 script I run locally to test the library.
-
-## Performance
-
-gorp uses reflection to construct SQL queries and bind parameters.
-See the BenchmarkNativeCrud vs BenchmarkGorpCrud in gorp_test.go for a
-simple perf test.  On my MacBook Pro gorp is about 2-3% slower than
-hand written SQL.
 
 
 ## Contributors
