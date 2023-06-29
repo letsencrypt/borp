@@ -555,7 +555,7 @@ func insert(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}
 			f := elem.FieldByName(bi.autoIncrFieldName)
 			switch inserter := m.Dialect.(type) {
 			case IntegerAutoIncrInserter:
-				id, err := inserter.InsertAutoIncr(exec, bi.query, bi.args...)
+				id, err := inserter.InsertAutoIncr(ctx, exec, bi.query, bi.args...)
 				if err != nil {
 					return err
 				}
@@ -568,7 +568,7 @@ func insert(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}
 					return fmt.Errorf("gorp: cannot set autoincrement value on non-Int field. SQL=%s  autoIncrIdx=%d autoIncrFieldName=%s", bi.query, bi.autoIncrIdx, bi.autoIncrFieldName)
 				}
 			case TargetedAutoIncrInserter:
-				err := inserter.InsertAutoIncrToTarget(exec, bi.query, f.Addr().Interface(), bi.args...)
+				err := inserter.InsertAutoIncrToTarget(ctx, exec, bi.query, f.Addr().Interface(), bi.args...)
 				if err != nil {
 					return err
 				}
@@ -577,7 +577,7 @@ func insert(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}
 				if idQuery == "" {
 					return fmt.Errorf("gorp: cannot set %s value if its ColumnMap.GeneratedIdQuery is empty", bi.autoIncrFieldName)
 				}
-				err := inserter.InsertQueryToTarget(exec, bi.query, idQuery, f.Addr().Interface(), bi.args...)
+				err := inserter.InsertQueryToTarget(ctx, exec, bi.query, idQuery, f.Addr().Interface(), bi.args...)
 				if err != nil {
 					return err
 				}
