@@ -87,7 +87,7 @@ func SelectNullStr(ctx context.Context, e SqlExecutor, query string, args ...int
 // SelectOne executes the given query (which should be a SELECT statement)
 // and binds the result to holder, which must be a pointer.
 //
-// # If no row is found, an error (sql.ErrNoRows specifically) will be returned
+// If no row is found, an error (sql.ErrNoRows specifically) will be returned.
 //
 // If more than one row is found, an error will be returned.
 func SelectOne(ctx context.Context, m *DbMap, e SqlExecutor, holder interface{}, query string, args ...interface{}) error {
