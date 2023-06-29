@@ -73,7 +73,7 @@ type Dialect interface {
 // the dialect can handle automatic assignment of more than just
 // integers, see TargetedAutoIncrInserter.
 type IntegerAutoIncrInserter interface {
-	InsertAutoIncr(exec SqlExecutor, insertSql string, params ...interface{}) (int64, error)
+	InsertAutoIncr(ctx context.Context, exec SqlExecutor, insertSql string, params ...interface{}) (int64, error)
 }
 
 // TargetedAutoIncrInserter is implemented by dialects that can
@@ -84,7 +84,7 @@ type TargetedAutoIncrInserter interface {
 	// automatically generated primary key directly to the passed in
 	// target.  The target should be a pointer to the primary key
 	// field of the value being inserted.
-	InsertAutoIncrToTarget(exec SqlExecutor, insertSql string, target interface{}, params ...interface{}) error
+	InsertAutoIncrToTarget(ectx context.Context, xec SqlExecutor, insertSql string, target interface{}, params ...interface{}) error
 }
 
 // TargetQueryInserter is implemented by dialects that can perform
@@ -94,7 +94,7 @@ type TargetQueryInserter interface {
 	// TargetQueryInserter runs an insert operation and assigns the
 	// automatically generated primary key retrived by the query
 	// extracted from the GeneratedIdQuery field of the id column.
-	InsertQueryToTarget(exec SqlExecutor, insertSql, idSql string, target interface{}, params ...interface{}) error
+	InsertQueryToTarget(ectx context.Context, xec SqlExecutor, insertSql, idSql string, target interface{}, params ...interface{}) error
 }
 
 func standardInsertAutoIncr(ctx context.Context, exec SqlExecutor, insertSql string, params ...interface{}) (int64, error) {
