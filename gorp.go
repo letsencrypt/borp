@@ -79,7 +79,12 @@ type SqlExecutor interface {
 	SelectNullStr(ctx context.Context, query string, args ...interface{}) (sql.NullString, error)
 	SelectOne(ctx context.Context, holder interface{}, query string, args ...interface{}) error
 
-	// These method signatures are shared with *sql.DB
+	// These method signatures are shared with *sql.DB.
+	// Stylistically, `Context` in the name is redundant. It is the future, everything takes a context.
+	// But since these three functions delegate to functions of the same name on *sql.DB, it would be
+	// a little confusing if we had, e.g. `Exec` (taking a context), which delegates to
+	// `sql.DB.ExecContext` (taking a context) as opposed to `sql.DB.Exec` (taking no context).
+	// So we don't both with `Context` in the name for Get, Insert, etc., but we do for these.
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
