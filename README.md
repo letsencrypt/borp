@@ -446,7 +446,6 @@ func (p *Person) PreDelete(s borp.SqlExecutor) error {
     query := "delete from invoice_test where PersonId=?"
 
     _, err := s.Exec(query, p.Id)
-
     if err != nil {
         return err
     }
