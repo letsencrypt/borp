@@ -203,7 +203,7 @@ func (t *Transaction) PrepareContext(ctx context.Context, query string) (*sql.St
 		now := time.Now()
 		defer t.dbmap.trace(now, query, nil)
 	}
-	return t.PrepareContext(ctx, query)
+	return t.tx.PrepareContext(ctx, query)
 }
 
 func (t *Transaction) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
@@ -215,7 +215,7 @@ func (t *Transaction) QueryRowContext(ctx context.Context, query string, args ..
 		now := time.Now()
 		defer t.dbmap.trace(now, query, args...)
 	}
-	return t.QueryRowContext(ctx, query, args...)
+	return t.tx.QueryRowContext(ctx, query, args...)
 }
 
 func (t *Transaction) QueryContext(ctx context.Context, q string, args ...interface{}) (*sql.Rows, error) {
@@ -227,5 +227,5 @@ func (t *Transaction) QueryContext(ctx context.Context, q string, args ...interf
 		now := time.Now()
 		defer t.dbmap.trace(now, q, args...)
 	}
-	return t.QueryContext(ctx, q, args...)
+	return t.tx.QueryContext(ctx, q, args...)
 }
