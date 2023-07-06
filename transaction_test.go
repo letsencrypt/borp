@@ -96,7 +96,7 @@ AND field12 IN (:FieldIntList)
 	dbmap.ExpandSliceArgs = true
 	dbmap.AddTableWithName(dataFormat{}, "crazy_table")
 
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -263,7 +263,7 @@ AND field12 IN (:FieldIntList)
 	dbmap.ExpandSliceArgs = true
 	dbmap.AddTableWithName(dataFormat{}, "crazy_table")
 
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}

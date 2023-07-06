@@ -675,7 +675,7 @@ func TestCreateTablesIfNotExists(t *testing.T) {
 	dbmap := initDBMap(t)
 	defer dropAndClose(dbmap)
 
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		t.Error(err)
 	}
@@ -684,7 +684,7 @@ func TestCreateTablesIfNotExists(t *testing.T) {
 func TestTruncateTables(t *testing.T) {
 	dbmap := initDBMap(t)
 	defer dropAndClose(dbmap)
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		t.Error(err)
 	}
@@ -695,7 +695,7 @@ func TestTruncateTables(t *testing.T) {
 	inv := &Invoice{0, 0, 1, "my invoice", 0, true}
 	dbmap.Insert(context.Background(), inv)
 
-	err = dbmap.TruncateTables()
+	err = dbmap.TruncateTables(context.Background())
 	if err != nil {
 		t.Error(err)
 	}
@@ -715,7 +715,7 @@ func TestCustomDateType(t *testing.T) {
 	dbmap := newDBMap(t)
 	dbmap.TypeConverter = testTypeConverter{}
 	dbmap.AddTable(WithCustomDate{}).SetKeys(true, "Id")
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -752,7 +752,7 @@ func TestUIntPrimaryKey(t *testing.T) {
 	dbmap.AddTable(PersonUInt64{}).SetKeys(true, "Id")
 	dbmap.AddTable(PersonUInt32{}).SetKeys(true, "Id")
 	dbmap.AddTable(PersonUInt16{}).SetKeys(true, "Id")
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -779,7 +779,7 @@ func TestUIntPrimaryKey(t *testing.T) {
 func TestSetUniqueTogether(t *testing.T) {
 	dbmap := newDBMap(t)
 	dbmap.AddTable(UniqueColumns{}).SetUniqueTogether("FirstName", "LastName").SetUniqueTogether("City", "ZipCode")
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -827,7 +827,7 @@ func TestSetUniqueTogetherIdempotent(t *testing.T) {
 	dbmap := newDBMap(t)
 	table := dbmap.AddTable(UniqueColumns{}).SetUniqueTogether("FirstName", "LastName")
 	table.SetUniqueTogether("FirstName", "LastName")
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -858,7 +858,7 @@ func TestPersistentUser(t *testing.T) {
 	dbmap.ExecContext(context.Background(), "drop table if exists PersistentUser")
 	table := dbmap.AddTable(PersistentUser{}).SetKeys(false, "Key")
 	table.ColMap("Key").Rename("mykey")
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -970,7 +970,7 @@ func TestNamedQueryMap(t *testing.T) {
 	dbmap.ExecContext(context.Background(), "drop table if exists PersistentUser")
 	table := dbmap.AddTable(PersistentUser{}).SetKeys(false, "Key")
 	table.ColMap("Key").Rename("mykey")
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -1067,7 +1067,7 @@ func TestNamedQueryStruct(t *testing.T) {
 	dbmap.ExecContext(context.Background(), "drop table if exists PersistentUser")
 	table := dbmap.AddTable(PersistentUser{}).SetKeys(false, "Key")
 	table.ColMap("Key").Rename("mykey")
-	err := dbmap.CreateTablesIfNotExists()
+	err := dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -1133,7 +1133,7 @@ func TestReturnsNonNilSlice(t *testing.T) {
 func TestOverrideVersionCol(t *testing.T) {
 	dbmap := newDBMap(t)
 	t1 := dbmap.AddTable(InvoicePersonView{}).SetKeys(false, "InvoiceId", "PersonId")
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -1248,7 +1248,7 @@ func TestScannerValuer(t *testing.T) {
 	dbmap := newDBMap(t)
 	dbmap.AddTableWithName(PersonValuerScanner{}, "person_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(InvoiceWithValuer{}, "invoice_test").SetKeys(true, "Id")
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -1292,7 +1292,7 @@ func TestColumnProps(t *testing.T) {
 	t1.ColMap("Memo").SetMaxSize(10)
 	t1.ColMap("PersonId").SetUnique(true)
 
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -2054,7 +2054,7 @@ func TestEmbeddedTime(t *testing.T) {
 	dbmap := newDBMap(t)
 	dbmap.AddTable(EmbeddedTime{}).SetKeys(false, "Id")
 	defer dropAndClose(dbmap)
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2352,22 +2352,22 @@ func TestMysqlPanicIfDialectNotInitialized(t *testing.T) {
 	db := &borp.DbMap{Db: connect(driver), Dialect: dialect}
 	db.AddTableWithName(Invoice{}, "invoice")
 	// the following call should panic :
-	db.CreateTables()
+	db.CreateTables(context.Background())
 }
 
 func TestSingleColumnKeyDbReturnsZeroRowsUpdatedOnPKChange(t *testing.T) {
 	dbmap := initDBMap(t)
 	defer dropAndClose(dbmap)
 	dbmap.AddTableWithName(SingleColumnTable{}, "single_column_table").SetKeys(false, "SomeId")
-	err := dbmap.DropTablesIfExists()
+	err := dbmap.DropTablesIfExists(context.Background())
 	if err != nil {
 		t.Error("Drop tables failed")
 	}
-	err = dbmap.CreateTablesIfNotExists()
+	err = dbmap.CreateTablesIfNotExists(context.Background())
 	if err != nil {
 		t.Error("Create tables failed")
 	}
-	err = dbmap.TruncateTables()
+	err = dbmap.TruncateTables(context.Background())
 	if err != nil {
 		t.Error("Truncate tables failed")
 	}
@@ -2460,7 +2460,7 @@ func TestCallOfValueMethodOnNilPointer(t *testing.T) {
 	dbmap := newDBMap(t)
 	dbmap.AddTable(NilPointer{}).SetKeys(false, "ID")
 	defer dropAndClose(dbmap)
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2570,7 +2570,7 @@ func initDBMapBench(b *testing.B) *borp.DbMap {
 	dbmap := newDBMap(b)
 	dbmap.Db.ExecContext(context.Background(), "drop table if exists invoice_test")
 	dbmap.AddTableWithName(Invoice{}, "invoice_test").SetKeys(true, "Id")
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -2597,16 +2597,16 @@ func initDBMap(t *testing.T) *borp.DbMap {
 	dbmap.AddTableWithName(WithTime{}, "time_test").SetKeys(true, "Id")
 	dbmap.AddTableWithName(WithNullTime{}, "nulltime_test").SetKeys(false, "Id")
 	dbmap.TypeConverter = testTypeConverter{}
-	err := dbmap.DropTablesIfExists()
+	err := dbmap.DropTablesIfExists(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	err = dbmap.CreateTables()
+	err = dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
 
-	err = dbmap.CreateIndex()
+	err = dbmap.CreateIndex(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -2621,7 +2621,7 @@ func initDBMap(t *testing.T) *borp.DbMap {
 func initDBMapNulls(t *testing.T) *borp.DbMap {
 	dbmap := newDBMap(t)
 	dbmap.AddTable(TableWithNull{}).SetKeys(false, "Id")
-	err := dbmap.CreateTables()
+	err := dbmap.CreateTables(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -2650,7 +2650,7 @@ func newDBMap(l Logger) *borp.DbMap {
 }
 
 func dropAndClose(dbmap *borp.DbMap) {
-	dbmap.DropTablesIfExists()
+	dbmap.DropTablesIfExists(context.Background())
 	dbmap.Db.Close()
 }
 
