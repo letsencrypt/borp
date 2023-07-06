@@ -150,9 +150,9 @@ func maybeExpandNamedQueryAndExec(ctx context.Context, e SqlExecutor, query stri
 		return m.Db.ExecContext(ctx, query, args...)
 	case *Transaction:
 		return m.tx.ExecContext(ctx, query, args...)
+	default:
+		return nil, fmt.Errorf("gorp: unknown SqlExecutor type: %T", m)
 	}
-
-	return e.ExecContext(ctx, query, args...)
 }
 
 func extractDbMap(e SqlExecutor) *DbMap {
