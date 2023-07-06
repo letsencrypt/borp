@@ -598,7 +598,7 @@ func (m *DbMap) Select(ctx context.Context, i interface{}, query string, args ..
 }
 
 // Exec runs an arbitrary SQL statement.  args represent the bind parameters.
-// This is equivalent to running:  Exec() using database/sql
+// This is equivalent to running:  ExecContext() using database/sql
 func (m *DbMap) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
@@ -735,7 +735,7 @@ func (m *DbMap) DynamicTableFor(tableName string, checkPK bool) (*TableMap, erro
 
 // Prepare creates a prepared statement for later queries or executions.
 // Multiple queries or executions may be run concurrently from the returned statement.
-// This is equivalent to running:  Prepare() using database/sql
+// This is equivalent to running:  PrepareContext() using database/sql
 func (m *DbMap) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
 	if m.logger != nil {
 		now := time.Now()
@@ -789,6 +789,7 @@ func (m *DbMap) tableForPointer(ptr interface{}, checkPK bool) (*TableMap, refle
 	return t, elem, nil
 }
 
+// This is equivalent to running:  QueryRowContext() using database/sql
 func (m *DbMap) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&query, args...)
@@ -801,6 +802,7 @@ func (m *DbMap) QueryRowContext(ctx context.Context, query string, args ...inter
 	return m.Db.QueryRowContext(ctx, query, args...)
 }
 
+// This is equivalent to running:  QueryContext() using database/sql
 func (m *DbMap) QueryContext(ctx context.Context, q string, args ...interface{}) (*sql.Rows, error) {
 	if m.ExpandSliceArgs {
 		expandSliceArgs(&q, args...)
