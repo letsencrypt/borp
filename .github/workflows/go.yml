@@ -12,7 +12,6 @@ permissions:
   contents: read
 
 jobs:
-
   integration-tests:
     runs-on: ubuntu-latest
     container: golang:1.20
@@ -47,9 +46,15 @@ jobs:
       with:
         persist-credentials: false
 
-
     - name: Go Build
       run: go build -v ./...
 
     - name: Unit Tests
       run: go test -v ./...
+
+  gvc:
+    runs-on: ubuntu-latest
+    container: golang:1.20
+    steps:
+    - id: govulncheck
+      uses: golang/govulncheck-action@v0.2.0
