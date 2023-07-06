@@ -145,7 +145,14 @@ func maybeExpandNamedQueryAndExec(ctx context.Context, e SqlExecutor, query stri
 		query, args = maybeExpandNamedQuery(dbMap, query, args)
 	}
 
-	return exec(ctx, e, query, args...)
+	switch m := e.(type) {
+	case *DbMap:
+		return m.Db.ExecContext(ctx, query, args...)
+	case *Transaction:
+		return m.tx.ExecContext(ctx, query, args...)
+	}
+
+	return e.ExecContext(ctx, query, args...)
 }
 
 func extractDbMap(e SqlExecutor) *DbMap {
@@ -154,25 +161,6 @@ func extractDbMap(e SqlExecutor) *DbMap {
 		return m
 	case *Transaction:
 		return m.dbmap
-	}
-	return nil
-}
-
-// executor exposes the sql.DB and sql.Tx functions so that it can be used
-// on internal functions that need to be agnostic to the underlying object.
-type executor interface {
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-}
-
-func extractExecutor(e SqlExecutor) executor {
-	switch m := e.(type) {
-	case *DbMap:
-		return m.Db
-	case *Transaction:
-		return m.tx
 	}
 	return nil
 }
@@ -599,28 +587,4 @@ func insert(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}
 		}
 	}
 	return nil
-}
-
-func exec(ctx context.Context, e SqlExecutor, query string, args ...interface{}) (sql.Result, error) {
-	executor := extractExecutor(e)
-
-	return executor.ExecContext(ctx, query, args...)
-}
-
-func prepare(ctx context.Context, e SqlExecutor, query string) (*sql.Stmt, error) {
-	executor := extractExecutor(e)
-
-	return executor.PrepareContext(ctx, query)
-}
-
-func queryRow(ctx context.Context, e SqlExecutor, query string, args ...interface{}) *sql.Row {
-	executor := extractExecutor(e)
-
-	return executor.QueryRowContext(ctx, query, args...)
-}
-
-func query(ctx context.Context, e SqlExecutor, query string, args ...interface{}) (*sql.Rows, error) {
-	executor := extractExecutor(e)
-
-	return executor.QueryContext(ctx, query, args...)
 }

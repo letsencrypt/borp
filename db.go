@@ -798,7 +798,7 @@ func (m *DbMap) QueryRowContext(ctx context.Context, query string, args ...inter
 		now := time.Now()
 		defer m.trace(now, query, args...)
 	}
-	return queryRow(ctx, m, query, args...)
+	return m.Db.QueryRowContext(ctx, query, args...)
 }
 
 func (m *DbMap) QueryContext(ctx context.Context, q string, args ...interface{}) (*sql.Rows, error) {
@@ -810,7 +810,7 @@ func (m *DbMap) QueryContext(ctx context.Context, q string, args ...interface{})
 		now := time.Now()
 		defer m.trace(now, q, args...)
 	}
-	return query(ctx, m, q, args...)
+	return m.Db.QueryContext(ctx, q, args...)
 }
 
 func (m *DbMap) trace(started time.Time, query string, args ...interface{}) {

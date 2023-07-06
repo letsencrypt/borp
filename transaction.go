@@ -167,7 +167,7 @@ func (t *Transaction) Savepoint(ctx context.Context, name string) error {
 		now := time.Now()
 		defer t.dbmap.trace(now, query, nil)
 	}
-	_, err := exec(ctx, t, query)
+	_, err := t.ExecContext(ctx, query)
 	return err
 }
 
@@ -180,7 +180,7 @@ func (t *Transaction) RollbackToSavepoint(ctx context.Context, savepoint string)
 		now := time.Now()
 		defer t.dbmap.trace(now, query, nil)
 	}
-	_, err := exec(ctx, t, query)
+	_, err := t.ExecContext(ctx, query)
 	return err
 }
 
@@ -193,7 +193,7 @@ func (t *Transaction) ReleaseSavepoint(ctx context.Context, savepoint string) er
 		now := time.Now()
 		defer t.dbmap.trace(now, query, nil)
 	}
-	_, err := exec(ctx, t, query)
+	_, err := t.ExecContext(ctx, query)
 	return err
 }
 
@@ -203,7 +203,7 @@ func (t *Transaction) PrepareContext(ctx context.Context, query string) (*sql.St
 		now := time.Now()
 		defer t.dbmap.trace(now, query, nil)
 	}
-	return prepare(ctx, t, query)
+	return t.PrepareContext(ctx, query)
 }
 
 func (t *Transaction) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
@@ -215,7 +215,7 @@ func (t *Transaction) QueryRowContext(ctx context.Context, query string, args ..
 		now := time.Now()
 		defer t.dbmap.trace(now, query, args...)
 	}
-	return queryRow(ctx, t, query, args...)
+	return t.QueryRowContext(ctx, query, args...)
 }
 
 func (t *Transaction) QueryContext(ctx context.Context, q string, args ...interface{}) (*sql.Rows, error) {
@@ -227,5 +227,5 @@ func (t *Transaction) QueryContext(ctx context.Context, q string, args ...interf
 		now := time.Now()
 		defer t.dbmap.trace(now, q, args...)
 	}
-	return query(ctx, t, q, args...)
+	return t.QueryContext(ctx, q, args...)
 }
