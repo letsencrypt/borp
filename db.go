@@ -68,12 +68,12 @@ func (m *DbMap) dynamicTableMap() map[string]*TableMap {
 	return m.tablesDynamic
 }
 
-func (m *DbMap) CreateIndex() error {
+func (m *DbMap) CreateIndex(ctx context.Context) error {
 	var err error
 	dialect := reflect.TypeOf(m.Dialect)
 	for _, table := range m.tables {
 		for _, index := range table.indexes {
-			err = m.createIndexImpl(dialect, table, index)
+			err = m.createIndexImpl(ctx, dialect, table, index)
 			if err != nil {
 				break
 			}
@@ -82,7 +82,7 @@ func (m *DbMap) CreateIndex() error {
 
 	for _, table := range m.dynamicTableMap() {
 		for _, index := range table.indexes {
-			err = m.createIndexImpl(dialect, table, index)
+			err = m.createIndexImpl(ctx, dialect, table, index)
 			if err != nil {
 				break
 			}
@@ -92,7 +92,7 @@ func (m *DbMap) CreateIndex() error {
 	return err
 }
 
-func (m *DbMap) createIndexImpl(dialect reflect.Type,
+func (m *DbMap) createIndexImpl(ctx context.Context, dialect reflect.Type,
 	table *TableMap,
 	index *IndexMap) error {
 	s := bytes.Buffer{}
@@ -115,11 +115,11 @@ func (m *DbMap) createIndexImpl(dialect reflect.Type,
 		s.WriteString(fmt.Sprintf(" %s %s", m.Dialect.CreateIndexSuffix(), index.IndexType))
 	}
 	s.WriteString(";")
-	_, err := m.ExecContext(context.TODO(), s.String())
+	_, err := m.ExecContext(ctx, s.String())
 	return err
 }
 
-func (t *TableMap) DropIndex(name string) error {
+func (t *TableMap) DropIndex(ctx context.Context, name string) error {
 
 	var err error
 	dialect := reflect.TypeOf(t.dbmap.Dialect)
@@ -132,7 +132,7 @@ func (t *TableMap) DropIndex(name string) error {
 				s.WriteString(fmt.Sprintf(" %s %s", t.dbmap.Dialect.DropIndexSuffix(), t.TableName))
 			}
 			s.WriteString(";")
-			_, e := t.dbmap.ExecContext(context.TODO(), s.String())
+			_, e := t.dbmap.ExecContext(ctx, s.String())
 			if e != nil {
 				err = e
 			}
@@ -359,23 +359,23 @@ func (m *DbMap) readStructColumns(t reflect.Type) (cols []*ColumnMap, primaryKey
 //
 // This is particularly useful in unit tests where you want to create
 // and destroy the schema automatically.
-func (m *DbMap) CreateTables() error {
-	return m.createTables(false)
+func (m *DbMap) CreateTables(ctx context.Context) error {
+	return m.createTables(ctx, false)
 }
 
 // CreateTablesIfNotExists is similar to CreateTables, but starts
 // each statement with "create table if not exists" so that existing
 // tables do not raise errors
-func (m *DbMap) CreateTablesIfNotExists() error {
-	return m.createTables(true)
+func (m *DbMap) CreateTablesIfNotExists(ctx context.Context) error {
+	return m.createTables(ctx, true)
 }
 
-func (m *DbMap) createTables(ifNotExists bool) error {
+func (m *DbMap) createTables(ctx context.Context, ifNotExists bool) error {
 	var err error
 	for i := range m.tables {
 		table := m.tables[i]
 		sql := table.SqlForCreate(ifNotExists)
-		_, err = m.ExecContext(context.TODO(), sql)
+		_, err = m.ExecContext(ctx, sql)
 		if err != nil {
 			return err
 		}
@@ -383,7 +383,7 @@ func (m *DbMap) createTables(ifNotExists bool) error {
 
 	for _, tbl := range m.dynamicTableMap() {
 		sql := tbl.SqlForCreate(ifNotExists)
-		_, err = m.ExecContext(context.TODO(), sql)
+		_, err = m.ExecContext(ctx, sql)
 		if err != nil {
 			return err
 		}
@@ -394,7 +394,7 @@ func (m *DbMap) createTables(ifNotExists bool) error {
 
 // DropTable drops an individual table.
 // Returns an error when the table does not exist.
-func (m *DbMap) DropTable(table interface{}) error {
+func (m *DbMap) DropTable(ctx context.Context, table interface{}) error {
 	t := reflect.TypeOf(table)
 
 	tableName := ""
@@ -402,11 +402,11 @@ func (m *DbMap) DropTable(table interface{}) error {
 		tableName = dyn.TableName()
 	}
 
-	return m.dropTable(t, tableName, false)
+	return m.dropTable(ctx, t, tableName, false)
 }
 
 // DropTableIfExists drops an individual table when the table exists.
-func (m *DbMap) DropTableIfExists(table interface{}) error {
+func (m *DbMap) DropTableIfExists(ctx context.Context, table interface{}) error {
 	t := reflect.TypeOf(table)
 
 	tableName := ""
@@ -414,34 +414,34 @@ func (m *DbMap) DropTableIfExists(table interface{}) error {
 		tableName = dyn.TableName()
 	}
 
-	return m.dropTable(t, tableName, true)
+	return m.dropTable(ctx, t, tableName, true)
 }
 
 // DropTables iterates through TableMaps registered to this DbMap and
 // executes "drop table" statements against the database for each.
-func (m *DbMap) DropTables() error {
-	return m.dropTables(false)
+func (m *DbMap) DropTables(ctx context.Context) error {
+	return m.dropTables(ctx, false)
 }
 
 // DropTablesIfExists is the same as DropTables, but uses the "if exists" clause to
 // avoid errors for tables that do not exist.
-func (m *DbMap) DropTablesIfExists() error {
-	return m.dropTables(true)
+func (m *DbMap) DropTablesIfExists(ctx context.Context) error {
+	return m.dropTables(ctx, true)
 }
 
 // Goes through all the registered tables, dropping them one by one.
 // If an error is encountered, then it is returned and the rest of
 // the tables are not dropped.
-func (m *DbMap) dropTables(addIfExists bool) (err error) {
+func (m *DbMap) dropTables(ctx context.Context, addIfExists bool) (err error) {
 	for _, table := range m.tables {
-		err = m.dropTableImpl(table, addIfExists)
+		err = m.dropTableImpl(ctx, table, addIfExists)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, table := range m.dynamicTableMap() {
-		err = m.dropTableImpl(table, addIfExists)
+		err = m.dropTableImpl(ctx, table, addIfExists)
 		if err != nil {
 			return err
 		}
@@ -451,21 +451,21 @@ func (m *DbMap) dropTables(addIfExists bool) (err error) {
 }
 
 // Implementation of dropping a single table.
-func (m *DbMap) dropTable(t reflect.Type, name string, addIfExists bool) error {
+func (m *DbMap) dropTable(ctx context.Context, t reflect.Type, name string, addIfExists bool) error {
 	table := tableOrNil(m, t, name)
 	if table == nil {
 		return fmt.Errorf("table %s was not registered", table.TableName)
 	}
 
-	return m.dropTableImpl(table, addIfExists)
+	return m.dropTableImpl(ctx, table, addIfExists)
 }
 
-func (m *DbMap) dropTableImpl(table *TableMap, ifExists bool) (err error) {
+func (m *DbMap) dropTableImpl(ctx context.Context, table *TableMap, ifExists bool) (err error) {
 	tableDrop := "drop table"
 	if ifExists {
 		tableDrop = m.Dialect.IfTableExists(tableDrop, table.SchemaName, table.TableName)
 	}
-	_, err = m.ExecContext(context.TODO(), fmt.Sprintf("%s %s;", tableDrop, m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
+	_, err = m.ExecContext(ctx, fmt.Sprintf("%s %s;", tableDrop, m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
 	return err
 }
 
@@ -473,18 +473,18 @@ func (m *DbMap) dropTableImpl(table *TableMap, ifExists bool) (err error) {
 // executes "truncate table" statements against the database for each, or in the case of
 // sqlite, a "delete from" with no "where" clause, which uses the truncate optimization
 // (http://www.sqlite.org/lang_delete.html)
-func (m *DbMap) TruncateTables() error {
+func (m *DbMap) TruncateTables(ctx context.Context) error {
 	var err error
 	for i := range m.tables {
 		table := m.tables[i]
-		_, e := m.ExecContext(context.TODO(), fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
+		_, e := m.ExecContext(ctx, fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
 		if e != nil {
 			err = e
 		}
 	}
 
 	for _, table := range m.dynamicTableMap() {
-		_, e := m.ExecContext(context.TODO(), fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
+		_, e := m.ExecContext(ctx, fmt.Sprintf("%s %s;", m.Dialect.TruncateClause(), m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName)))
 		if e != nil {
 			err = e
 		}
