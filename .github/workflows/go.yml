@@ -13,9 +13,13 @@ permissions:
 
 jobs:
   integration-tests:
+    strategy:
+      matrix:
+        containerGoVer:
+          - "1.20"
+          - "1.21-rc"
     runs-on: ubuntu-latest
-    container: golang:1.20
-
+    container: golang:${{ matrix.containerGoVer }}
     services:
       mysql:
         image: mariadb:10.5
@@ -29,7 +33,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
-
     steps:
       - uses: actions/checkout@v3
         with:
@@ -39,8 +42,13 @@ jobs:
         run: ./test_all.sh
 
   quick-tests:
+    strategy:
+      matrix:
+        containerGoVer:
+          - "1.20"
+          - "1.21-rc"
     runs-on: ubuntu-latest
-    container: golang:1.20
+    container: golang:${{ matrix.containerGoVer }}
     steps:
     - uses: actions/checkout@v3
       with:
@@ -53,8 +61,17 @@ jobs:
       run: go test -v ./...
 
   gvc:
+    strategy:
+      matrix:
+        include:
+          - containerGoVer: "1.20"
+            setupGoVer: "1.20.5"
+          - containerGoVer: "1.21-rc"
+            setupGoVer: "1.21.0-rc.2" # https://github.com/actions/setup-go#v3
     runs-on: ubuntu-latest
-    container: golang:1.20
+    container: golang:${{ matrix.containerGoVer }}
     steps:
     - id: govulncheck
       uses: golang/govulncheck-action@v0.2.0
+      with:
+        go-version: ${{ matrix.setupGoVer }}
