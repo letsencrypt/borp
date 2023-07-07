@@ -74,4 +74,4 @@ jobs:
     - id: govulncheck
       uses: golang/govulncheck-action@v0.2.0
       with:
-        go-version: ${{ matrix.setupGoVer }}
+        go-version-input: ${{ matrix.setupGoVer }}
