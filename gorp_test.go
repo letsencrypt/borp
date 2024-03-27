@@ -34,6 +34,7 @@ var (
 	// verify interface compliance
 	_ = []borp.Dialect{
 		borp.SqliteDialect{},
+		borp.PostgresDialect{},
 		borp.MySQLDialect{},
 	}
 
@@ -1480,6 +1481,56 @@ func TestTransactionExecNamed(t *testing.T) {
 	}
 }
 
+func TestTransactionExecNamedPostgres(t *testing.T) {
+	if os.Getenv("GORP_TEST_DIALECT") != "postgres" {
+		return
+	}
+	ctx := context.Background()
+	dbmap := initDBMap(t)
+	defer dropAndClose(dbmap)
+	trans, err := dbmap.BeginTx(ctx)
+	if err != nil {
+		panic(err)
+	}
+	// exec should support named params
+	args := map[string]interface{}{
+		"created":  100,
+		"updated":  200,
+		"memo":     "zzTest",
+		"personID": 0,
+		"isPaid":   false,
+	}
+	_, err = trans.ExecContext(ctx, `INSERT INTO invoice_test ("Created", "Updated", "Memo", "PersonId", "IsPaid") Values(:created, :updated, :memo, :personID, :isPaid)`, args)
+	if err != nil {
+		panic(err)
+	}
+	var checkMemo = func(want string) {
+		args := map[string]interface{}{
+			"memo": want,
+		}
+		memo, err := trans.SelectStr(ctx, `select "Memo" from invoice_test where "Memo" = :memo`, args)
+		if err != nil {
+			panic(err)
+		}
+		if memo != want {
+			t.Errorf("%q != %q", want, memo)
+		}
+	}
+	checkMemo("zzTest")
+
+	// exec should still work with ? params
+	_, err = trans.ExecContext(ctx, `INSERT INTO invoice_test ("Created", "Updated", "Memo", "PersonId", "IsPaid") Values($1, $2, $3, $4, $5)`, 10, 15, "yyTest", 0, true)
+
+	if err != nil {
+		panic(err)
+	}
+	checkMemo("yyTest")
+	err = trans.Commit()
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestSavepoint(t *testing.T) {
 	dbmap := initDBMap(t)
 	defer dropAndClose(dbmap)
@@ -2674,6 +2725,8 @@ func dialectAndDriver() (borp.Dialect, string) {
 		// seems mostly unmaintained recently.  We've dropped it from tests, at least for
 		// now.
 		return borp.MySQLDialect{"InnoDB", "UTF8"}, "mysql"
+	case "postgres":
+		return borp.PostgresDialect{}, "postgres"
 	case "sqlite":
 		return borp.SqliteDialect{}, "sqlite3"
 	}
