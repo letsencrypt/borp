@@ -27,6 +27,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/letsencrypt/borp"
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -1427,6 +1428,9 @@ func TestTransaction(t *testing.T) {
 }
 
 func TestTransactionExecNamed(t *testing.T) {
+	if os.Getenv("GORP_TEST_DIALECT") == "postgres" {
+		return
+	}
 	dbmap := initDBMap(t)
 	defer dropAndClose(dbmap)
 	trans, err := dbmap.BeginTx(context.Background())
@@ -2531,10 +2535,18 @@ func BenchmarkNativeCrud(b *testing.B) {
 	columnPersonId := columnName(dbmap, Invoice{}, "PersonId")
 	b.StartTimer()
 
-	insert := "insert into invoice_test (" + columnCreated + ", " + columnUpdated + ", " + columnMemo + ", " + columnPersonId + ") values (?, ?, ?, ?)"
-	sel := "select " + columnId + ", " + columnCreated + ", " + columnUpdated + ", " + columnMemo + ", " + columnPersonId + " from invoice_test where " + columnId + "=?"
-	update := "update invoice_test set " + columnCreated + "=?, " + columnUpdated + "=?, " + columnMemo + "=?, " + columnPersonId + "=? where " + columnId + "=?"
-	delete := "delete from invoice_test where " + columnId + "=?"
+	var insert, sel, update, delete string
+	if os.Getenv("GORP_TEST_DIALECT") != "postgres" {
+		insert = "insert into invoice_test (" + columnCreated + ", " + columnUpdated + ", " + columnMemo + ", " + columnPersonId + ") values (?, ?, ?, ?)"
+		sel = "select " + columnId + ", " + columnCreated + ", " + columnUpdated + ", " + columnMemo + ", " + columnPersonId + " from invoice_test where " + columnId + "=?"
+		update = "update invoice_test set " + columnCreated + "=?, " + columnUpdated + "=?, " + columnMemo + "=?, " + columnPersonId + "=? where " + columnId + "=?"
+		delete = "delete from invoice_test where " + columnId + "=?"
+	} else {
+		insert = "insert into invoice_test (" + columnCreated + ", " + columnUpdated + ", " + columnMemo + ", " + columnPersonId + ") values ($1, $2, $3, $4)"
+		sel = "select " + columnId + ", " + columnCreated + ", " + columnUpdated + ", " + columnMemo + ", " + columnPersonId + " from invoice_test where " + columnId + "=$1"
+		update = "update invoice_test set " + columnCreated + "=$1, " + columnUpdated + "=$2, " + columnMemo + "=$3, " + columnPersonId + "=$4 where " + columnId + "=$5"
+		delete = "delete from invoice_test where " + columnId + "=$1"
+	}
 
 	inv := &Invoice{0, 100, 200, "my memo", 0, false}
 
