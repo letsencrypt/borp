@@ -2,9 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+//go:build !integration
 // +build !integration
 
-package gorp_test
+package borp_test
 
 import (
 	"database/sql"
@@ -12,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-gorp/gorp/v3"
+	"github.com/letsencrypt/borp"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"

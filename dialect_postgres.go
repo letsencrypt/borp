@@ -2,9 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-package gorp
+package borp
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -103,7 +104,7 @@ func (d PostgresDialect) BindVar(i int) string {
 }
 
 func (d PostgresDialect) InsertAutoIncrToTarget(exec SqlExecutor, insertSql string, target interface{}, params ...interface{}) error {
-	rows, err := exec.Query(insertSql, params...)
+	rows, err := exec.QueryContext(context.TODO(), insertSql, params...)
 	if err != nil {
 		return err
 	}
