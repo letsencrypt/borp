@@ -13,16 +13,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-borp/borp"
+	"github.com/letsencrypt/borp"
 	"github.com/poy/onpar"
 	"github.com/poy/onpar/expect"
 	"github.com/poy/onpar/matchers"
 )
 
+type postgresTestContext struct {
+	expect  expect.Expectation
+	dialect borp.PostgresDialect
+}
+
 func TestPostgresDialect(t *testing.T) {
-	o := onpar.BeforeEach(onpar.New(t), func(t *testing.T) (expect.Expectation, borp.PostgresDialect) {
-		return expect.New(t), borp.PostgresDialect{
-			LowercaseFields: false,
+	o := onpar.BeforeEach(onpar.New(t), func(t *testing.T) postgresTestContext {
+		return postgresTestContext{
+			expect.New(t),
+			borp.PostgresDialect{
+				LowercaseFields: false,
+			},
 		}
 	})
 
@@ -59,92 +67,92 @@ func TestPostgresDialect(t *testing.T) {
 			{"large string", "", 1024, false, "varchar(1024)"},
 		}
 		for _, t := range tests {
-			o.Spec(t.name, func(expect expect.Expectation, dialect borp.PostgresDialect) {
+			o.Spec(t.name, func(tcx postgresTestContext) {
 				typ := reflect.TypeOf(t.value)
-				sqlType := dialect.ToSqlType(typ, t.maxSize, t.autoIncr)
-				expect(sqlType).To(matchers.Equal(t.expected))
+				sqlType := tcx.dialect.ToSqlType(typ, t.maxSize, t.autoIncr)
+				tcx.expect(sqlType).To(matchers.Equal(t.expected))
 			})
 		}
 	})
 
-	o.Spec("AutoIncrStr", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.AutoIncrStr()).To(matchers.Equal(""))
+	o.Spec("AutoIncrStr", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.AutoIncrStr()).To(matchers.Equal(""))
 	})
 
-	o.Spec("AutoIncrBindValue", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.AutoIncrBindValue()).To(matchers.Equal("default"))
+	o.Spec("AutoIncrBindValue", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.AutoIncrBindValue()).To(matchers.Equal("default"))
 	})
 
-	o.Spec("AutoIncrInsertSuffix", func(expect expect.Expectation, dialect borp.PostgresDialect) {
+	o.Spec("AutoIncrInsertSuffix", func(tcx postgresTestContext) {
 		cm := borp.ColumnMap{
 			ColumnName: "foo",
 		}
-		expect(dialect.AutoIncrInsertSuffix(&cm)).To(matchers.Equal(` returning "foo"`))
+		tcx.expect(tcx.dialect.AutoIncrInsertSuffix(&cm)).To(matchers.Equal(` returning "foo"`))
 	})
 
-	o.Spec("CreateTableSuffix", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.CreateTableSuffix()).To(matchers.Equal(""))
+	o.Spec("CreateTableSuffix", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.CreateTableSuffix()).To(matchers.Equal(""))
 	})
 
-	o.Spec("CreateIndexSuffix", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.CreateIndexSuffix()).To(matchers.Equal("using"))
+	o.Spec("CreateIndexSuffix", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.CreateIndexSuffix()).To(matchers.Equal("using"))
 	})
 
-	o.Spec("DropIndexSuffix", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.DropIndexSuffix()).To(matchers.Equal(""))
+	o.Spec("DropIndexSuffix", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.DropIndexSuffix()).To(matchers.Equal(""))
 	})
 
-	o.Spec("TruncateClause", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.TruncateClause()).To(matchers.Equal("truncate"))
+	o.Spec("TruncateClause", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.TruncateClause()).To(matchers.Equal("truncate"))
 	})
 
-	o.Spec("SleepClause", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.SleepClause(1 * time.Second)).To(matchers.Equal("pg_sleep(1.000000)"))
-		expect(dialect.SleepClause(100 * time.Millisecond)).To(matchers.Equal("pg_sleep(0.100000)"))
+	o.Spec("SleepClause", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.SleepClause(1 * time.Second)).To(matchers.Equal("pg_sleep(1.000000)"))
+		tcx.expect(tcx.dialect.SleepClause(100 * time.Millisecond)).To(matchers.Equal("pg_sleep(0.100000)"))
 	})
 
-	o.Spec("BindVar", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.BindVar(0)).To(matchers.Equal("$1"))
-		expect(dialect.BindVar(4)).To(matchers.Equal("$5"))
+	o.Spec("BindVar", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.BindVar(0)).To(matchers.Equal("$1"))
+		tcx.expect(tcx.dialect.BindVar(4)).To(matchers.Equal("$5"))
 	})
 
 	o.Group("QuoteField", func() {
-		o.Spec("By default, case is preserved", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-			expect(dialect.QuoteField("Foo")).To(matchers.Equal(`"Foo"`))
-			expect(dialect.QuoteField("bar")).To(matchers.Equal(`"bar"`))
+		o.Spec("By default, case is preserved", func(tcx postgresTestContext) {
+			tcx.expect(tcx.dialect.QuoteField("Foo")).To(matchers.Equal(`"Foo"`))
+			tcx.expect(tcx.dialect.QuoteField("bar")).To(matchers.Equal(`"bar"`))
 		})
 
 		o.Group("With LowercaseFields set to true", func() {
-			o.BeforeEach(func(expect expect.Expectation, dialect borp.PostgresDialect) (expect.Expectation, borp.PostgresDialect) {
-				dialect.LowercaseFields = true
-				return expect, dialect
+			o := onpar.BeforeEach(o, func(tcx postgresTestContext) postgresTestContext {
+				tcx.dialect.LowercaseFields = true
+				return postgresTestContext{tcx.expect, tcx.dialect}
 			})
 
-			o.Spec("fields are lowercased", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-				expect(dialect.QuoteField("Foo")).To(matchers.Equal(`"foo"`))
+			o.Spec("fields are lowercased", func(tcx postgresTestContext) {
+				tcx.expect(tcx.dialect.QuoteField("Foo")).To(matchers.Equal(`"foo"`))
 			})
 		})
 	})
 
 	o.Group("QuotedTableForQuery", func() {
-		o.Spec("using the default schema", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-			expect(dialect.QuotedTableForQuery("", "foo")).To(matchers.Equal(`"foo"`))
+		o.Spec("using the default schema", func(tcx postgresTestContext) {
+			tcx.expect(tcx.dialect.QuotedTableForQuery("", "foo")).To(matchers.Equal(`"foo"`))
 		})
 
-		o.Spec("with a supplied schema", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-			expect(dialect.QuotedTableForQuery("foo", "bar")).To(matchers.Equal(`foo."bar"`))
+		o.Spec("with a supplied schema", func(tcx postgresTestContext) {
+			tcx.expect(tcx.dialect.QuotedTableForQuery("foo", "bar")).To(matchers.Equal(`foo."bar"`))
 		})
 	})
 
-	o.Spec("IfSchemaNotExists", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.IfSchemaNotExists("foo", "bar")).To(matchers.Equal("foo if not exists"))
+	o.Spec("IfSchemaNotExists", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.IfSchemaNotExists("foo", "bar")).To(matchers.Equal("foo if not exists"))
 	})
 
-	o.Spec("IfTableExists", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.IfTableExists("foo", "bar", "baz")).To(matchers.Equal("foo if exists"))
+	o.Spec("IfTableExists", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.IfTableExists("foo", "bar", "baz")).To(matchers.Equal("foo if exists"))
 	})
 
-	o.Spec("IfTableNotExists", func(expect expect.Expectation, dialect borp.PostgresDialect) {
-		expect(dialect.IfTableNotExists("foo", "bar", "baz")).To(matchers.Equal("foo if not exists"))
+	o.Spec("IfTableNotExists", func(tcx postgresTestContext) {
+		tcx.expect(tcx.dialect.IfTableNotExists("foo", "bar", "baz")).To(matchers.Equal("foo if not exists"))
 	})
 }
