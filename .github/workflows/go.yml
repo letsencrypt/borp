@@ -21,6 +21,18 @@ jobs:
     runs-on: ubuntu-latest
     container: golang:${{ matrix.containerGoVer }}
     services:
+      postgres:
+       image: postgres
+       env:
+         POSTGRES_DB: gorptest
+         POSTGRES_USER: gorptest
+         POSTGRES_PASSWORD: gorptest
+       options: >-
+         --health-cmd pg_isready
+         --health-interval 10s
+         --health-timeout 5s
+         --health-retries 10
+
       mysql:
         image: mariadb:10.5
         env:
