@@ -1766,21 +1766,21 @@ func TestTypeConversionExample(t *testing.T) {
 	}
 
 	_, err = dbmap.SelectInt(context.Background(),
-		"select id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		"select Id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
 		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectInt(context.Background(),
-		"select id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		"select Id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
 		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectNullInt(context.Background(),
-		"select id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		"select Id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
 		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
