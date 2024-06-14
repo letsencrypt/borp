@@ -1734,7 +1734,8 @@ func TestTypeConversionExample(t *testing.T) {
 		t.Errorf("tc2 %v != %v", expected, tc2)
 	}
 
-	tc2.Name = CustomStringType("hi2")
+	hi2 := CustomStringType("hi2")
+	tc2.Name = hi2
 	tc2.PersonJSON = Person{FName: "Jane", LName: "Doe"}
 	_update(dbmap, tc2)
 
@@ -1750,73 +1751,72 @@ func TestTypeConversionExample(t *testing.T) {
 	personJSON := Person{FName: "Jane", LName: "Doe"}
 	_, err := dbmap.Select(context.Background(),
 		holder,
-		"select * from type_conv_test where personjson = ?",
-		personJSON,
-	)
+		"select * from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	err = dbmap.SelectOne(context.Background(),
 		&holder,
-		"select * from type_conv_test where personjson = ?",
-		personJSON)
+		"select * from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectInt(context.Background(),
-		"select id from type_conv_test where personjson = ?",
-		personJSON)
+		"select id from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectInt(context.Background(),
-		"select id from type_conv_test where personjson = ?",
-		personJSON)
+		"select id from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectNullInt(context.Background(),
-		"select id from type_conv_test where personjson = ?",
-		personJSON)
+		"select id from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectFloat(context.Background(),
-		"select id * 1.2 from type_conv_test where personjson = ?",
-		personJSON)
+		"select id * 1.2 from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectNullFloat(context.Background(),
-		"select id * 1.2 from type_conv_test where personjson = ?",
-		personJSON)
+		"select id * 1.2 from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectStr(context.Background(),
-		"select name from type_conv_test where personjson = ?",
-		personJSON)
+		"select name from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.SelectNullStr(context.Background(),
-		"select name from type_conv_test where personjson = ?",
-		personJSON)
+		"select name from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
 
 	_, err = dbmap.QueryContext(context.Background(),
-		"select name from type_conv_test where personjson = ?",
-		personJSON)
+		"select name from type_conv_test where personjson = ? and name = ?",
+		personJSON, hi2)
 	if err != nil {
 		t.Errorf("Select failed: %s", err)
 	}
