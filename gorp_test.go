@@ -1745,94 +1745,101 @@ func TestTypeConversionExample(t *testing.T) {
 		t.Errorf("tc3 %v != %v", expected, tc3)
 	}
 
+	d := dbmap.Dialect
+	pj := d.QuoteField("PersonJSON")
+	id := d.QuoteField("Id")
+	name := d.QuoteField("Name")
+	bv0 := d.BindVar(0)
+	bv1 := d.BindVar(1)
+
 	// Test that the Person argument to Select goes through the
 	// type converter
 	var holder TypeConversionExample
 	personJSON := Person{FName: "Jane", LName: "Doe"}
 	_, err := dbmap.Select(context.Background(),
 		holder,
-		"select * from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	err = dbmap.SelectOne(context.Background(),
 		&holder,
-		"select * from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.SelectInt(context.Background(),
-		"select Id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.SelectInt(context.Background(),
-		"select Id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.SelectNullInt(context.Background(),
-		"select Id from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.SelectFloat(context.Background(),
-		"select Id * 1.2 from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.SelectNullFloat(context.Background(),
-		"select Id * 1.2 from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.SelectStr(context.Background(),
-		"select name from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.SelectNullStr(context.Background(),
-		"select name from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	_, err = dbmap.QueryContext(context.Background(),
-		"select name from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	row := dbmap.QueryRowContext(context.Background(),
-		"select name from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if row == nil || row.Err() != nil {
-		t.Errorf("QueryRowContext failed: %s", row.Err())
+		t.Errorf(`QueryRowContext failed: %s`, row.Err())
 	}
 
 	_, err = dbmap.ExecContext(context.Background(),
-		"select name from type_conv_test where PersonJSON = "+dbmap.Dialect.BindVar(0)+" and Name = "+dbmap.Dialect.BindVar(1),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
-		t.Errorf("Select failed: %s", err)
+		t.Errorf(`Select failed: %s`, err)
 	}
 
 	if _del(dbmap, tc) != 1 {
