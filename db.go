@@ -605,20 +605,6 @@ func (m *DbMap) Select(ctx context.Context, i interface{}, query string, args ..
 	return hookedselect(ctx, m, m, i, query, args...)
 }
 
-func (m *DbMap) convertArgs(args ...interface{}) ([]interface{}, error) {
-	if m.TypeConverter == nil {
-		return args, nil
-	}
-	for i, arg := range args {
-		converted, err := m.TypeConverter.ToDb(arg)
-		if err != nil {
-			return nil, err
-		}
-		args[i] = converted
-	}
-	return args, nil
-}
-
 // Exec runs an arbitrary SQL statement.  args represent the bind parameters.
 // This is equivalent to running:  ExecContext() using database/sql
 func (m *DbMap) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
@@ -896,6 +882,22 @@ func (m *DbMap) trace(started time.Time, query string, args ...interface{}) {
 		var margs = argsString(args...)
 		m.logger.Printf("%s%s [%s] (%v)", m.logPrefix, query, margs, (time.Since(started)))
 	}
+}
+
+// convertArgs passes each argument through the TypeConverter, if any,
+// and returns the result (which may be identical to the input).
+func (m *DbMap) convertArgs(args ...interface{}) ([]interface{}, error) {
+	if m.TypeConverter == nil {
+		return args, nil
+	}
+	for i, arg := range args {
+		converted, err := m.TypeConverter.ToDb(arg)
+		if err != nil {
+			return nil, err
+		}
+		args[i] = converted
+	}
+	return args, nil
 }
 
 type stringer interface {
