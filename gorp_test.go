@@ -1734,7 +1734,8 @@ func TestTypeConversionExample(t *testing.T) {
 		t.Errorf("tc2 %v != %v", expected, tc2)
 	}
 
-	tc2.Name = CustomStringType("hi2")
+	hi2 := CustomStringType("hi2")
+	tc2.Name = hi2
 	tc2.PersonJSON = Person{FName: "Jane", LName: "Doe"}
 	_update(dbmap, tc2)
 
@@ -1744,10 +1745,106 @@ func TestTypeConversionExample(t *testing.T) {
 		t.Errorf("tc3 %v != %v", expected, tc3)
 	}
 
+	d := dbmap.Dialect
+	pj := d.QuoteField("PersonJSON")
+	id := d.QuoteField("Id")
+	name := d.QuoteField("Name")
+	bv0 := d.BindVar(0)
+	bv1 := d.BindVar(1)
+
+	// Test that the Person argument to Select goes through the
+	// type converter
+	var holder TypeConversionExample
+	personJSON := Person{FName: "Jane", LName: "Doe"}
+	_, err := dbmap.Select(context.Background(),
+		holder,
+		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	err = dbmap.SelectOne(context.Background(),
+		&holder,
+		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.SelectInt(context.Background(),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.SelectInt(context.Background(),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.SelectNullInt(context.Background(),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.SelectFloat(context.Background(),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.SelectNullFloat(context.Background(),
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.SelectStr(context.Background(),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.SelectNullStr(context.Background(),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = dbmap.QueryContext(context.Background(),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	row := dbmap.QueryRowContext(context.Background(),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if row == nil || row.Err() != nil {
+		t.Errorf(`QueryRowContext failed: %s`, row.Err())
+	}
+
+	_, err = dbmap.ExecContext(context.Background(),
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
 	if _del(dbmap, tc) != 1 {
 		t.Errorf("Did not delete row with Id: %d", tc.Id)
 	}
-
 }
 
 func TestWithEmbeddedStruct(t *testing.T) {
