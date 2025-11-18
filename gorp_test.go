@@ -1720,7 +1720,7 @@ func TestColumnFilter(t *testing.T) {
 	}
 }
 
-func TestTypeConversionExample(t *testing.T) {
+func TestTypeConversionDBMapExample(t *testing.T) {
 	dbmap := initDBMap(t)
 	defer dropAndClose(dbmap)
 
@@ -1821,12 +1821,13 @@ func TestTypeConversionExample(t *testing.T) {
 		t.Errorf(`Select failed: %s`, err)
 	}
 
-	_, err = dbmap.QueryContext(context.Background(),
+	rows, err := dbmap.QueryContext(context.Background(),
 		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
 		t.Errorf(`Select failed: %s`, err)
 	}
+	_ = rows.Close()
 
 	row := dbmap.QueryRowContext(context.Background(),
 		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
@@ -1840,6 +1841,155 @@ func TestTypeConversionExample(t *testing.T) {
 		personJSON, hi2)
 	if err != nil {
 		t.Errorf(`Select failed: %s`, err)
+	}
+
+	if _del(dbmap, tc) != 1 {
+		t.Errorf("Did not delete row with Id: %d", tc.Id)
+	}
+}
+
+func TestTypeConversionTransactionExample(t *testing.T) {
+	dbmap := initDBMap(t)
+	defer dropAndClose(dbmap)
+
+	p := Person{FName: "Bob", LName: "Smith"}
+	tc := &TypeConversionExample{-1, p, CustomStringType("hi")}
+	_insert(dbmap, tc)
+
+	expected := &TypeConversionExample{1, p, CustomStringType("hi")}
+	tc2 := _get(dbmap, TypeConversionExample{}, tc.Id).(*TypeConversionExample)
+	if !reflect.DeepEqual(expected, tc2) {
+		t.Errorf("tc2 %v != %v", expected, tc2)
+	}
+
+	hi2 := CustomStringType("hi2")
+	tc2.Name = hi2
+	tc2.PersonJSON = Person{FName: "Jane", LName: "Doe"}
+	_update(dbmap, tc2)
+
+	expected = &TypeConversionExample{1, tc2.PersonJSON, CustomStringType("hi2")}
+	tc3 := _get(dbmap, TypeConversionExample{}, tc.Id).(*TypeConversionExample)
+	if !reflect.DeepEqual(expected, tc3) {
+		t.Errorf("tc3 %v != %v", expected, tc3)
+	}
+
+	d := dbmap.Dialect
+	pj := d.QuoteField("PersonJSON")
+	id := d.QuoteField("Id")
+	name := d.QuoteField("Name")
+	bv0 := d.BindVar(0)
+	bv1 := d.BindVar(1)
+
+	// Test that the Person argument to Select goes through the
+	// type converter
+	var holder TypeConversionExample
+	personJSON := Person{FName: "Jane", LName: "Doe"}
+	ctx := context.Background()
+	tx, err := dbmap.BeginTx(ctx)
+	if err != nil {
+		t.Errorf("begin tx: %v", err)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Select(ctx,
+		holder,
+		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	err = tx.SelectOne(ctx,
+		&holder,
+		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = tx.SelectInt(ctx,
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = tx.SelectInt(ctx,
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = tx.SelectNullInt(ctx,
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = tx.SelectFloat(ctx,
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = tx.SelectNullFloat(ctx,
+		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = tx.SelectStr(ctx,
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	_, err = tx.SelectNullStr(ctx,
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	rows, err := tx.QueryContext(ctx,
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+	_ = rows.Close()
+
+	row := tx.QueryRowContext(ctx,
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if row == nil || row.Err() != nil {
+		t.Errorf(`QueryRowContext failed: %s`, row.Err())
+	}
+	// Must consume the row to release the connection.
+	var gotName string
+	err = row.Scan(&gotName)
+	if err != nil {
+		t.Errorf(`QueryRowContext failed: %s`, err)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
+		personJSON, hi2)
+	if err != nil {
+		t.Errorf(`Select failed: %s`, err)
+	}
+
+	// We must rollback to release the transaction's connection before we can
+	// delete the row below.
+	err = tx.Rollback()
+	if err != nil {
+		t.Errorf("rollback failed: %v", err)
 	}
 
 	if _del(dbmap, tc) != 1 {
