@@ -656,7 +656,7 @@ func dynamicTablesTestDelete(t *testing.T,
 	// Try reading again to make sure instance is gone from db
 	getInst := TenantDynamic{curTable: inpInst.TableName()}
 	dbInst, err := dbmap.Get(context.Background(), &getInst, inpInst.Id)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		t.Errorf("Error while trying to read deleted %v object using id: %v",
 			inpInst.TableName(), inpInst.Id)
 	}
