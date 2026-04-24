@@ -3026,6 +3026,9 @@ func _del(dbmap *borp.DbMap, list ...interface{}) int64 {
 
 func _get(dbmap *borp.DbMap, i interface{}, keys ...interface{}) interface{} {
 	obj, err := dbmap.Get(context.Background(), i, keys...)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
 	if err != nil {
 		panic(err)
 	}
