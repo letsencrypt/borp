@@ -1459,7 +1459,8 @@ func TestTransactionExecNamed(t *testing.T) {
 		args := map[string]interface{}{
 			"id": id,
 		}
-		memo, err := trans.SelectStr(context.Background(), "select memo from invoice_test where id = :id", args)
+		var memo string
+		err := trans.SelectOne(context.Background(), &memo, "select memo from invoice_test where id = :id", args)
 		if err != nil {
 			panic(err)
 		}
@@ -1512,7 +1513,8 @@ func TestTransactionExecNamedPostgres(t *testing.T) {
 		args := map[string]interface{}{
 			"memo": want,
 		}
-		memo, err := trans.SelectStr(ctx, `select "Memo" from invoice_test where "Memo" = :memo`, args)
+		var memo string
+		err := trans.SelectOne(ctx, &memo, `select "Memo" from invoice_test where "Memo" = :memo`, args)
 		if err != nil {
 			panic(err)
 		}
@@ -1548,7 +1550,8 @@ func TestSavepoint(t *testing.T) {
 	trans.Insert(context.Background(), inv1)
 
 	var checkMemo = func(want string) {
-		memo, err := trans.SelectStr(context.Background(), "select "+columnName(dbmap, Invoice{}, "Memo")+" from invoice_test")
+		var memo string
+		err := trans.SelectOne(context.Background(), &memo, "select "+columnName(dbmap, Invoice{}, "Memo")+" from invoice_test")
 		if err != nil {
 			panic(err)
 		}
@@ -1747,7 +1750,6 @@ func TestTypeConversionDBMapExample(t *testing.T) {
 
 	d := dbmap.Dialect
 	pj := d.QuoteField("PersonJSON")
-	id := d.QuoteField("Id")
 	name := d.QuoteField("Name")
 	bv0 := d.BindVar(0)
 	bv1 := d.BindVar(1)
@@ -1767,55 +1769,6 @@ func TestTypeConversionDBMapExample(t *testing.T) {
 	err = dbmap.SelectOne(context.Background(),
 		&holder,
 		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = dbmap.SelectInt(context.Background(),
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = dbmap.SelectInt(context.Background(),
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = dbmap.SelectNullInt(context.Background(),
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = dbmap.SelectFloat(context.Background(),
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = dbmap.SelectNullFloat(context.Background(),
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = dbmap.SelectStr(context.Background(),
-		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = dbmap.SelectNullStr(context.Background(),
-		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
 		t.Errorf(`Select failed: %s`, err)
@@ -1875,7 +1828,6 @@ func TestTypeConversionTransactionExample(t *testing.T) {
 
 	d := dbmap.Dialect
 	pj := d.QuoteField("PersonJSON")
-	id := d.QuoteField("Id")
 	name := d.QuoteField("Name")
 	bv0 := d.BindVar(0)
 	bv1 := d.BindVar(1)
@@ -1903,55 +1855,6 @@ func TestTypeConversionTransactionExample(t *testing.T) {
 	err = tx.SelectOne(ctx,
 		&holder,
 		`select * from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = tx.SelectInt(ctx,
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = tx.SelectInt(ctx,
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = tx.SelectNullInt(ctx,
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = tx.SelectFloat(ctx,
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = tx.SelectNullFloat(ctx,
-		`select `+id+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = tx.SelectStr(ctx,
-		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
-		personJSON, hi2)
-	if err != nil {
-		t.Errorf(`Select failed: %s`, err)
-	}
-
-	_, err = tx.SelectNullStr(ctx,
-		`select `+name+` from type_conv_test where `+pj+`=`+bv0+` and `+name+`=`+bv1,
 		personJSON, hi2)
 	if err != nil {
 		t.Errorf(`Select failed: %s`, err)
@@ -2101,100 +2004,6 @@ func TestWithEmbeddedAutoincr(t *testing.T) {
 	var expectedAutoincrId int64 = 1
 	if esa.Id != expectedAutoincrId {
 		t.Errorf("%d != %d", expectedAutoincrId, esa.Id)
-	}
-}
-
-func TestSelectVal(t *testing.T) {
-	dbmap := initDBMapNulls(t)
-	defer dropAndClose(dbmap)
-
-	bindVar := dbmap.Dialect.BindVar(0)
-
-	t1 := TableWithNull{Str: sql.NullString{"abc", true},
-		Int64:   sql.NullInt64{78, true},
-		Float64: sql.NullFloat64{32.2, true},
-		Bool:    sql.NullBool{true, true},
-		Bytes:   []byte("hi")}
-	_insert(dbmap, &t1)
-
-	// SelectInt
-	i64 := selectInt(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
-	if i64 != 78 {
-		t.Errorf("int64 %d != 78", i64)
-	}
-	i64 = selectInt(dbmap, "select count(*) from "+tableName(dbmap, TableWithNull{}))
-	if i64 != 1 {
-		t.Errorf("int64 count %d != 1", i64)
-	}
-	i64 = selectInt(dbmap, "select count(*) from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"="+bindVar, "asdfasdf")
-	if i64 != 0 {
-		t.Errorf("int64 no rows %d != 0", i64)
-	}
-
-	// SelectNullInt
-	n := selectNullInt(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='notfound'")
-	if !reflect.DeepEqual(n, sql.NullInt64{0, false}) {
-		t.Errorf("nullint %v != 0,false", n)
-	}
-
-	n = selectNullInt(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
-	if !reflect.DeepEqual(n, sql.NullInt64{78, true}) {
-		t.Errorf("nullint %v != 78, true", n)
-	}
-
-	// SelectFloat
-	f64 := selectFloat(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
-	if f64 != 32.2 {
-		t.Errorf("float64 %f != 32.2", f64)
-	}
-	f64 = selectFloat(dbmap, "select min("+columnName(dbmap, TableWithNull{}, "Float64")+") from "+tableName(dbmap, TableWithNull{}))
-	if f64 != 32.2 {
-		t.Errorf("float64 min %f != 32.2", f64)
-	}
-	f64 = selectFloat(dbmap, "select count(*) from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"="+bindVar, "asdfasdf")
-	if f64 != 0 {
-		t.Errorf("float64 no rows %f != 0", f64)
-	}
-
-	// SelectNullFloat
-	nf := selectNullFloat(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='notfound'")
-	if !reflect.DeepEqual(nf, sql.NullFloat64{0, false}) {
-		t.Errorf("nullfloat %v != 0,false", nf)
-	}
-
-	nf = selectNullFloat(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
-	if !reflect.DeepEqual(nf, sql.NullFloat64{32.2, true}) {
-		t.Errorf("nullfloat %v != 32.2, true", nf)
-	}
-
-	// SelectStr
-	s := selectStr(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"="+bindVar, 78)
-	if s != "abc" {
-		t.Errorf("s %s != abc", s)
-	}
-	s = selectStr(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='asdfasdf'")
-	if s != "" {
-		t.Errorf("s no rows %s != ''", s)
-	}
-
-	// SelectNullStr
-	ns := selectNullStr(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"="+bindVar, 78)
-	if !reflect.DeepEqual(ns, sql.NullString{"abc", true}) {
-		t.Errorf("nullstr %v != abc,true", ns)
-	}
-	ns = selectNullStr(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='asdfasdf'")
-	if !reflect.DeepEqual(ns, sql.NullString{"", false}) {
-		t.Errorf("nullstr no rows %v != '',false", ns)
-	}
-
-	// SelectInt/Str with named parameters
-	i64 = selectInt(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"=:abc", map[string]string{"abc": "abc"})
-	if i64 != 78 {
-		t.Errorf("int64 %d != 78", i64)
-	}
-	ns = selectNullStr(dbmap, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"=:num", map[string]int{"num": 78})
-	if !reflect.DeepEqual(ns, sql.NullString{"abc", true}) {
-		t.Errorf("nullstr %v != abc,true", ns)
 	}
 }
 
@@ -3034,60 +2843,6 @@ func _get(dbmap *borp.DbMap, i interface{}, keys ...interface{}) interface{} {
 	}
 
 	return obj
-}
-
-func selectInt(dbmap *borp.DbMap, query string, args ...interface{}) int64 {
-	i64, err := borp.SelectInt(context.Background(), dbmap, query, args...)
-	if err != nil {
-		panic(err)
-	}
-
-	return i64
-}
-
-func selectNullInt(dbmap *borp.DbMap, query string, args ...interface{}) sql.NullInt64 {
-	i64, err := borp.SelectNullInt(context.Background(), dbmap, query, args...)
-	if err != nil {
-		panic(err)
-	}
-
-	return i64
-}
-
-func selectFloat(dbmap *borp.DbMap, query string, args ...interface{}) float64 {
-	f64, err := borp.SelectFloat(context.Background(), dbmap, query, args...)
-	if err != nil {
-		panic(err)
-	}
-
-	return f64
-}
-
-func selectNullFloat(dbmap *borp.DbMap, query string, args ...interface{}) sql.NullFloat64 {
-	f64, err := borp.SelectNullFloat(context.Background(), dbmap, query, args...)
-	if err != nil {
-		panic(err)
-	}
-
-	return f64
-}
-
-func selectStr(dbmap *borp.DbMap, query string, args ...interface{}) string {
-	s, err := borp.SelectStr(context.Background(), dbmap, query, args...)
-	if err != nil {
-		panic(err)
-	}
-
-	return s
-}
-
-func selectNullStr(dbmap *borp.DbMap, query string, args ...interface{}) sql.NullString {
-	s, err := borp.SelectNullStr(context.Background(), dbmap, query, args...)
-	if err != nil {
-		panic(err)
-	}
-
-	return s
 }
 
 func rawExec(dbmap *borp.DbMap, query string, args ...interface{}) sql.Result {
