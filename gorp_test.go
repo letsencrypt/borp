@@ -2050,6 +2050,10 @@ func TestSelectVal(t *testing.T) {
 	if i64 != 0 {
 		t.Errorf("SelectOne count(*) of no rows: got %d, want 0", i64)
 	}
+	err = dbmap.SelectOne(context.Background(), &i64, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"="+bindVar, "asdfasdf")
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("SelectOne of no rows: got %s, want sql.ErrNoRows", err)
+	}
 
 	var n *int64
 	err = dbmap.SelectOne(context.Background(), &n, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Id")+"=987654321")
@@ -2070,6 +2074,9 @@ func TestSelectVal(t *testing.T) {
 
 	var f64 float64
 	err = dbmap.SelectOne(context.Background(), &f64, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
+	if err != nil {
+		t.Fatalf("SelectOne of nullable float failed: %s", err)
+	}
 	if f64 != 32.2 {
 		t.Errorf("SelectOne of float64: got %f, want 32.2", f64)
 	}
@@ -2085,7 +2092,11 @@ func TestSelectVal(t *testing.T) {
 		t.Errorf("SelectOne float64 count(*) failed: %s", err)
 	}
 	if f64 != 0 {
-		t.Errorf("SelectOne float64 count(*) no rows: got %f, want", f64)
+		t.Errorf("SelectOne float64 count(*) no rows: got %f, want 0", f64)
+	}
+	err = dbmap.SelectOne(context.Background(), &f64, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='asdfasdf'")
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("SelectOne float64 of no rows: got %s, want sql.ErrNoRows", err)
 	}
 
 	var nf *float64
@@ -2099,7 +2110,7 @@ func TestSelectVal(t *testing.T) {
 
 	err = dbmap.SelectOne(context.Background(), &nf, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
 	if err != nil {
-		t.Errorf("SelectOne of nullable float failed: %s", err)
+		t.Fatalf("SelectOne of nullable float failed: %s", err)
 	}
 	if *nf != 32.2 {
 		t.Errorf("select nullable float: got %f, want 32.2", *nf)
@@ -2118,11 +2129,10 @@ func TestSelectVal(t *testing.T) {
 		t.Errorf("SelectOne: got %s, want sql.ErrNoRows", err)
 	}
 
-	foo := "foo"
-	var ns *string = &foo
+	var ns *string
 	err = dbmap.SelectOne(context.Background(), &ns, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"="+bindVar, 78)
 	if err != nil {
-		t.Errorf("SelectOne of nullable string failed: %s", err)
+		t.Fatalf("SelectOne of nullable string failed: %s", err)
 	}
 	if *ns != "abc" {
 		t.Errorf("SelectOne of nullable string: got %#v, want abc", ns)
@@ -2135,7 +2145,7 @@ func TestSelectVal(t *testing.T) {
 		t.Errorf("SelectOne of nullable string: got %#v, want nil", ns)
 	}
 
-	// Select with named parameters
+	// SelectOne with named parameters
 	err = dbmap.SelectOne(context.Background(), &i64, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"=:abc", map[string]string{"abc": "abc"})
 	if err != nil {
 		t.Errorf("SelectOne i64 failed: %s", err)
@@ -2144,6 +2154,9 @@ func TestSelectVal(t *testing.T) {
 		t.Errorf("SelectOne i64: got %d, want 78", i64)
 	}
 	err = dbmap.SelectOne(context.Background(), &ns, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"=:num", map[string]int{"num": 78})
+	if err != nil {
+		t.Fatalf("SelectOne of nullable string failed: %s", err)
+	}
 	if *ns != "abc" {
 		t.Errorf("SelectOne nullable string: got %v, want 'abc'", ns)
 	}
