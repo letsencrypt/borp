@@ -2023,7 +2023,7 @@ func TestSelectVal(t *testing.T) {
 		Id:      987654321,
 		Str:     sql.NullString{"", false},
 		Int64:   sql.NullInt64{0, false},
-		Float64: sql.NullFloat64{32.2, false},
+		Float64: sql.NullFloat64{0, false},
 		Bool:    sql.NullBool{true, false},
 		Bytes:   []byte("hi")}
 	_insert(dbmap, &nulls)
@@ -2075,7 +2075,7 @@ func TestSelectVal(t *testing.T) {
 	var f64 float64
 	err = dbmap.SelectOne(context.Background(), &f64, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
 	if err != nil {
-		t.Fatalf("SelectOne of nullable float failed: %s", err)
+		t.Errorf("SelectOne of float failed: %s", err)
 	}
 	if f64 != 32.2 {
 		t.Errorf("SelectOne of float64: got %f, want 32.2", f64)
