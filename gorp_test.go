@@ -2007,6 +2007,148 @@ func TestWithEmbeddedAutoincr(t *testing.T) {
 	}
 }
 
+func TestSelectVal(t *testing.T) {
+	dbmap := initDBMapNulls(t)
+	defer dropAndClose(dbmap)
+
+	bindVar := dbmap.Dialect.BindVar(0)
+
+	t1 := TableWithNull{Str: sql.NullString{"abc", true},
+		Int64:   sql.NullInt64{78, true},
+		Float64: sql.NullFloat64{32.2, true},
+		Bool:    sql.NullBool{true, true},
+		Bytes:   []byte("hi")}
+	_insert(dbmap, &t1)
+	nulls := TableWithNull{
+		Id:      987654321,
+		Str:     sql.NullString{"", false},
+		Int64:   sql.NullInt64{0, false},
+		Float64: sql.NullFloat64{32.2, false},
+		Bool:    sql.NullBool{true, false},
+		Bytes:   []byte("hi")}
+	_insert(dbmap, &nulls)
+
+	var i64 int64
+	err := dbmap.SelectOne(context.Background(), &i64, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
+	if err != nil {
+		t.Errorf("SelectOne i64 failed: %s", err)
+	}
+	if i64 != 78 {
+		t.Errorf("SelectOne i64: got %d, want 78", i64)
+	}
+	err = dbmap.SelectOne(context.Background(), &i64, "select count(*) from "+tableName(dbmap, TableWithNull{}))
+	if err != nil {
+		t.Errorf("SelectOne count(*) failed: %s", err)
+	}
+	if i64 != 2 {
+		t.Errorf("SelectOne count(*): got %d, want 2", i64)
+	}
+	err = dbmap.SelectOne(context.Background(), &i64, "select count(*) from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"="+bindVar, "asdfasdf")
+	if err != nil {
+		t.Errorf("SelectOne count(*) of no rows failed: %s", err)
+	}
+	if i64 != 0 {
+		t.Errorf("SelectOne count(*) of no rows: got %d, want 0", i64)
+	}
+
+	var n *int64
+	err = dbmap.SelectOne(context.Background(), &n, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Id")+"=987654321")
+	if err != nil {
+		t.Errorf("SelectOne of nullable int failed: %s", err)
+	}
+	if n != nil {
+		t.Errorf("SelectOne of nullable int: got %d, want nil", *n)
+	}
+
+	err = dbmap.SelectOne(context.Background(), &n, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
+	if err != nil {
+		t.Fatalf("SelectOne of nullable int failed: %s", err)
+	}
+	if *n != 78 {
+		t.Errorf("SelectOne of nullable int: got %d, want 78", *n)
+	}
+
+	var f64 float64
+	err = dbmap.SelectOne(context.Background(), &f64, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
+	if f64 != 32.2 {
+		t.Errorf("SelectOne of float64: got %f, want 32.2", f64)
+	}
+	err = dbmap.SelectOne(context.Background(), &f64, "select min("+columnName(dbmap, TableWithNull{}, "Float64")+") from "+tableName(dbmap, TableWithNull{}))
+	if err != nil {
+		t.Errorf("SelectOne float64 min failed: %s", err)
+	}
+	if f64 != 32.2 {
+		t.Errorf("SelectOne float64 min: got %f, want 32.2", f64)
+	}
+	err = dbmap.SelectOne(context.Background(), &f64, "select count(*) from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"="+bindVar, "asdfasdf")
+	if err != nil {
+		t.Errorf("SelectOne float64 count(*) failed: %s", err)
+	}
+	if f64 != 0 {
+		t.Errorf("SelectOne float64 count(*) no rows: got %f, want", f64)
+	}
+
+	var nf *float64
+	err = dbmap.SelectOne(context.Background(), &nf, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Id")+"=987654321")
+	if err != nil {
+		t.Errorf("SelectOne of nullable float failed: %s", err)
+	}
+	if nf != nil {
+		t.Errorf("SelectOne of nullable float: got %f, want nil", *nf)
+	}
+
+	err = dbmap.SelectOne(context.Background(), &nf, "select "+columnName(dbmap, TableWithNull{}, "Float64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='abc'")
+	if err != nil {
+		t.Errorf("SelectOne of nullable float failed: %s", err)
+	}
+	if *nf != 32.2 {
+		t.Errorf("select nullable float: got %f, want 32.2", *nf)
+	}
+
+	var s string
+	err = dbmap.SelectOne(context.Background(), &s, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"="+bindVar, 78)
+	if err != nil {
+		t.Errorf("SelectOne of string failed: %s", err)
+	}
+	if s != "abc" {
+		t.Errorf("SelectOne of string: got %q, want %q", s, "abc")
+	}
+	err = dbmap.SelectOne(context.Background(), &s, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"='asdfasdf'")
+	if !errors.Is(err, sql.ErrNoRows) {
+		t.Errorf("SelectOne: got %s, want sql.ErrNoRows", err)
+	}
+
+	foo := "foo"
+	var ns *string = &foo
+	err = dbmap.SelectOne(context.Background(), &ns, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"="+bindVar, 78)
+	if err != nil {
+		t.Errorf("SelectOne of nullable string failed: %s", err)
+	}
+	if *ns != "abc" {
+		t.Errorf("SelectOne of nullable string: got %#v, want abc", ns)
+	}
+	err = dbmap.SelectOne(context.Background(), &ns, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Id")+"=987654321")
+	if err != nil {
+		t.Errorf("SelectOne of nullable string failed: %s", err)
+	}
+	if ns != nil {
+		t.Errorf("SelectOne of nullable string: got %#v, want nil", ns)
+	}
+
+	// Select with named parameters
+	err = dbmap.SelectOne(context.Background(), &i64, "select "+columnName(dbmap, TableWithNull{}, "Int64")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Str")+"=:abc", map[string]string{"abc": "abc"})
+	if err != nil {
+		t.Errorf("SelectOne i64 failed: %s", err)
+	}
+	if i64 != 78 {
+		t.Errorf("SelectOne i64: got %d, want 78", i64)
+	}
+	err = dbmap.SelectOne(context.Background(), &ns, "select "+columnName(dbmap, TableWithNull{}, "Str")+" from "+tableName(dbmap, TableWithNull{})+" where "+columnName(dbmap, TableWithNull{}, "Int64")+"=:num", map[string]int{"num": 78})
+	if *ns != "abc" {
+		t.Errorf("SelectOne nullable string: got %v, want 'abc'", ns)
+	}
+}
+
 func TestVersionMultipleRows(t *testing.T) {
 	dbmap := initDBMap(t)
 	defer dropAndClose(dbmap)
