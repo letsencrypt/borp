@@ -163,62 +163,70 @@ func (t *TableMap) bindInsert(elem reflect.Value) (bindInstance, error) {
 
 func (t *TableMap) bindUpdate(elem reflect.Value, colFilter ColumnFilter) (bindInstance, error) {
 	if colFilter == nil {
-		colFilter = acceptAllFilter
+		plan := &t.updatePlan
+		plan.once.Do(func() {
+			t.buildUpdatePlan(plan, acceptAllFilter)
+		})
+		return plan.createBindInstance(elem, t.dbmap.TypeConverter)
 	}
 
-	plan := &t.updatePlan
-	plan.once.Do(func() {
-		s := bytes.Buffer{}
-		s.WriteString(fmt.Sprintf("update %s set ", t.dbmap.Dialect.QuotedTableForQuery(t.SchemaName, t.TableName)))
-		x := 0
+	// ColumnFilter functions are caller-provided and do not have a stable cache key.
+	// Build filtered plans per call so UpdateColumns always reflects this invocation.
+	plan := &bindPlan{}
+	t.buildUpdatePlan(plan, colFilter)
+	return plan.createBindInstance(elem, t.dbmap.TypeConverter)
+}
 
-		for y := range t.Columns {
-			col := t.Columns[y]
-			if !col.isAutoIncr && !col.Transient && colFilter(col) {
-				if x > 0 {
-					s.WriteString(", ")
-				}
-				s.WriteString(t.dbmap.Dialect.QuoteField(col.ColumnName))
-				s.WriteString("=")
-				s.WriteString(t.dbmap.Dialect.BindVar(x))
+func (t *TableMap) buildUpdatePlan(plan *bindPlan, colFilter ColumnFilter) {
+	s := bytes.Buffer{}
+	tableName := t.dbmap.Dialect.QuotedTableForQuery(t.SchemaName, t.TableName)
+	s.WriteString(fmt.Sprintf("update %s set ", tableName))
+	x := 0
 
-				if col == t.version {
-					plan.versField = col.fieldName
-					plan.argFields = append(plan.argFields, versFieldConst)
-				} else {
-					plan.argFields = append(plan.argFields, col.fieldName)
-				}
-				x++
-			}
-		}
-
-		s.WriteString(" where ")
-		for y := range t.keys {
-			col := t.keys[y]
-			if y > 0 {
-				s.WriteString(" and ")
+	for y := range t.Columns {
+		col := t.Columns[y]
+		if !col.isAutoIncr && !col.Transient && colFilter(col) {
+			if x > 0 {
+				s.WriteString(", ")
 			}
 			s.WriteString(t.dbmap.Dialect.QuoteField(col.ColumnName))
 			s.WriteString("=")
 			s.WriteString(t.dbmap.Dialect.BindVar(x))
 
-			plan.argFields = append(plan.argFields, col.fieldName)
-			plan.keyFields = append(plan.keyFields, col.fieldName)
+			if col == t.version {
+				plan.versField = col.fieldName
+				plan.argFields = append(plan.argFields, versFieldConst)
+			} else {
+				plan.argFields = append(plan.argFields, col.fieldName)
+			}
 			x++
 		}
-		if plan.versField != "" {
+	}
+
+	s.WriteString(" where ")
+	for y := range t.keys {
+		col := t.keys[y]
+		if y > 0 {
 			s.WriteString(" and ")
-			s.WriteString(t.dbmap.Dialect.QuoteField(t.version.ColumnName))
-			s.WriteString("=")
-			s.WriteString(t.dbmap.Dialect.BindVar(x))
-			plan.argFields = append(plan.argFields, plan.versField)
 		}
-		s.WriteString(t.dbmap.Dialect.QuerySuffix())
+		s.WriteString(t.dbmap.Dialect.QuoteField(col.ColumnName))
+		s.WriteString("=")
+		s.WriteString(t.dbmap.Dialect.BindVar(x))
 
-		plan.query = s.String()
-	})
+		plan.argFields = append(plan.argFields, col.fieldName)
+		plan.keyFields = append(plan.keyFields, col.fieldName)
+		x++
+	}
+	if plan.versField != "" {
+		s.WriteString(" and ")
+		s.WriteString(t.dbmap.Dialect.QuoteField(t.version.ColumnName))
+		s.WriteString("=")
+		s.WriteString(t.dbmap.Dialect.BindVar(x))
+		plan.argFields = append(plan.argFields, plan.versField)
+	}
+	s.WriteString(t.dbmap.Dialect.QuerySuffix())
 
-	return plan.createBindInstance(elem, t.dbmap.TypeConverter)
+	plan.query = s.String()
 }
 
 func (t *TableMap) bindDelete(elem reflect.Value) (bindInstance, error) {
