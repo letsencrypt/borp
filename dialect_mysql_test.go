@@ -141,6 +141,7 @@ func TestMySQLDialect(t *testing.T) {
 
 	o.Spec("QuoteField", func(tcx testContext) {
 		tcx.expect(tcx.dialect.QuoteField("foo")).To(matchers.Equal("`foo`"))
+		tcx.expect(tcx.dialect.QuoteField("fo`o")).To(matchers.Equal("`fo``o`"))
 	})
 
 	o.Group("QuotedTableForQuery", func() {
@@ -149,7 +150,8 @@ func TestMySQLDialect(t *testing.T) {
 		})
 
 		o.Spec("with a supplied schema", func(tcx testContext) {
-			tcx.expect(tcx.dialect.QuotedTableForQuery("foo", "bar")).To(matchers.Equal("foo.`bar`"))
+			tcx.expect(tcx.dialect.QuotedTableForQuery("foo", "bar")).To(matchers.Equal("`foo`.`bar`"))
+			tcx.expect(tcx.dialect.QuotedTableForQuery("fo`o", "ba`r")).To(matchers.Equal("`fo``o`.`ba``r`"))
 		})
 	})
 

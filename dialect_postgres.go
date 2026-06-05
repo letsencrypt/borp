@@ -124,9 +124,9 @@ func (d PostgresDialect) InsertAutoIncrToTarget(ctx context.Context, exec SqlExe
 
 func (d PostgresDialect) QuoteField(f string) string {
 	if d.LowercaseFields {
-		return `"` + strings.ToLower(f) + `"`
+		f = strings.ToLower(f)
 	}
-	return `"` + f + `"`
+	return `"` + strings.ReplaceAll(f, `"`, `""`) + `"`
 }
 
 func (d PostgresDialect) QuotedTableForQuery(schema string, table string) string {
@@ -134,7 +134,7 @@ func (d PostgresDialect) QuotedTableForQuery(schema string, table string) string
 		return d.QuoteField(table)
 	}
 
-	return schema + "." + d.QuoteField(table)
+	return d.QuoteField(schema) + "." + d.QuoteField(table)
 }
 
 func (d PostgresDialect) IfSchemaNotExists(command, schema string) string {
