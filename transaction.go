@@ -27,12 +27,7 @@ func (t *Transaction) Insert(ctx context.Context, list ...interface{}) error {
 
 // Update had the same behavior as DbMap.Update(), but runs in a transaction.
 func (t *Transaction) Update(ctx context.Context, list ...interface{}) (int64, error) {
-	return update(ctx, t.dbmap, t, nil, list...)
-}
-
-// UpdateColumns had the same behavior as DbMap.UpdateColumns(), but runs in a transaction.
-func (t *Transaction) UpdateColumns(ctx context.Context, filter ColumnFilter, list ...interface{}) (int64, error) {
-	return update(ctx, t.dbmap, t, filter, list...)
+	return update(ctx, t.dbmap, t, list...)
 }
 
 // Delete has the same behavior as DbMap.Delete(), but runs in a transaction.

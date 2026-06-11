@@ -458,7 +458,7 @@ func delete(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}
 	return count, nil
 }
 
-func update(ctx context.Context, m *DbMap, exec SqlExecutor, colFilter ColumnFilter, list ...interface{}) (int64, error) {
+func update(ctx context.Context, m *DbMap, exec SqlExecutor, list ...interface{}) (int64, error) {
 	count := int64(0)
 	for _, ptr := range list {
 		table, elem, err := m.tableForPointer(ptr, true)
@@ -474,7 +474,7 @@ func update(ctx context.Context, m *DbMap, exec SqlExecutor, colFilter ColumnFil
 			}
 		}
 
-		bi, err := table.bindUpdate(elem, colFilter)
+		bi, err := table.bindUpdate(elem)
 		if err != nil {
 			return -1, err
 		}
