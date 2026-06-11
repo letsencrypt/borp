@@ -101,7 +101,11 @@ func (m *DbMap) createIndexImpl(ctx context.Context, dialect reflect.Type,
 		s.WriteString(" unique")
 	}
 	s.WriteString(" index")
-	s.WriteString(fmt.Sprintf(" %s on %s", index.IndexName, table.TableName))
+	s.WriteString(fmt.Sprintf(
+		" %s on %s",
+		m.Dialect.QuoteField(index.IndexName),
+		m.Dialect.QuotedTableForQuery(table.SchemaName, table.TableName),
+	))
 	if dname := dialect.Name(); dname == "PostgresDialect" && index.IndexType != "" {
 		s.WriteString(fmt.Sprintf(" %s %s", m.Dialect.CreateIndexSuffix(), index.IndexType))
 	}
@@ -129,10 +133,14 @@ func (t *TableMap) DropIndex(ctx context.Context, name string) error {
 	for _, idx := range t.indexes {
 		if idx.IndexName == name {
 			s := bytes.Buffer{}
-			s.WriteString(fmt.Sprintf("DROP INDEX %s", idx.IndexName))
+			s.WriteString(fmt.Sprintf("DROP INDEX %s", t.dbmap.Dialect.QuoteField(idx.IndexName)))
 
 			if dname := dialect.Name(); dname == "MySQLDialect" {
-				s.WriteString(fmt.Sprintf(" %s %s", t.dbmap.Dialect.DropIndexSuffix(), t.TableName))
+				s.WriteString(fmt.Sprintf(
+					" %s %s",
+					t.dbmap.Dialect.DropIndexSuffix(),
+					t.dbmap.Dialect.QuotedTableForQuery(t.SchemaName, t.TableName),
+				))
 			}
 			s.WriteString(";")
 			_, e := t.dbmap.ExecContext(ctx, s.String())

@@ -146,7 +146,7 @@ func (d MySQLDialect) InsertAutoIncr(ctx context.Context, exec SqlExecutor, inse
 }
 
 func (d MySQLDialect) QuoteField(f string) string {
-	return "`" + f + "`"
+	return "`" + strings.ReplaceAll(f, "`", "``") + "`"
 }
 
 func (d MySQLDialect) QuotedTableForQuery(schema string, table string) string {
@@ -154,7 +154,7 @@ func (d MySQLDialect) QuotedTableForQuery(schema string, table string) string {
 		return d.QuoteField(table)
 	}
 
-	return schema + "." + d.QuoteField(table)
+	return d.QuoteField(schema) + "." + d.QuoteField(table)
 }
 
 func (d MySQLDialect) IfSchemaNotExists(command, schema string) string {

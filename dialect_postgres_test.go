@@ -120,6 +120,7 @@ func TestPostgresDialect(t *testing.T) {
 		o.Spec("By default, case is preserved", func(tcx postgresTestContext) {
 			tcx.expect(tcx.dialect.QuoteField("Foo")).To(matchers.Equal(`"Foo"`))
 			tcx.expect(tcx.dialect.QuoteField("bar")).To(matchers.Equal(`"bar"`))
+			tcx.expect(tcx.dialect.QuoteField(`Fo"o`)).To(matchers.Equal(`"Fo""o"`))
 		})
 
 		o.Group("With LowercaseFields set to true", func() {
@@ -130,6 +131,7 @@ func TestPostgresDialect(t *testing.T) {
 
 			o.Spec("fields are lowercased", func(tcx postgresTestContext) {
 				tcx.expect(tcx.dialect.QuoteField("Foo")).To(matchers.Equal(`"foo"`))
+				tcx.expect(tcx.dialect.QuoteField(`Fo"O`)).To(matchers.Equal(`"fo""o"`))
 			})
 		})
 	})
@@ -140,7 +142,8 @@ func TestPostgresDialect(t *testing.T) {
 		})
 
 		o.Spec("with a supplied schema", func(tcx postgresTestContext) {
-			tcx.expect(tcx.dialect.QuotedTableForQuery("foo", "bar")).To(matchers.Equal(`foo."bar"`))
+			tcx.expect(tcx.dialect.QuotedTableForQuery("foo", "bar")).To(matchers.Equal(`"foo"."bar"`))
+			tcx.expect(tcx.dialect.QuotedTableForQuery(`fo"o`, `ba"r`)).To(matchers.Equal(`"fo""o"."ba""r"`))
 		})
 	})
 

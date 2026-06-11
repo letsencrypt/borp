@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type SqliteDialect struct {
@@ -92,7 +93,7 @@ func (d SqliteDialect) InsertAutoIncr(ctx context.Context, exec SqlExecutor, ins
 }
 
 func (d SqliteDialect) QuoteField(f string) string {
-	return `"` + f + `"`
+	return `"` + strings.ReplaceAll(f, `"`, `""`) + `"`
 }
 
 // sqlite does not have schemas like PostgreSQL does, so just escape it like normal
