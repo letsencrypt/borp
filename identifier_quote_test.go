@@ -154,172 +154,122 @@ func requireIdentifierCapturedQuery(t *testing.T, want string) {
 	}
 }
 
+type identifierUpdatedRow struct {
+	ID    int64  `db:"ID"`
+	Value string `db:"Value"`
+}
+
+type identifierIndexedRow struct {
+	ID int64 `db:"ID"`
+}
+
+type identifierSQLCase struct {
+	name            string
+	dialect         Dialect
+	schema          string
+	table           string
+	indexName       string
+	indexType       string
+	wantUpdate      string
+	wantCreateIndex string
+	wantDropIndex   string
+}
+
+var identifierSQLCases = []identifierSQLCase{
+	{
+		name:            "sqlite",
+		dialect:         SqliteDialect{},
+		schema:          `sche"ma`,
+		table:           `security"rows`,
+		indexName:       `idx"name`,
+		wantUpdate:      `update "security""rows" set "Value"=? where "ID"=?;`,
+		wantCreateIndex: `create index "idx""name" on "security""rows" ("ID");`,
+		wantDropIndex:   `DROP INDEX "idx""name";`,
+	},
+	{
+		name:      "postgres",
+		dialect:   PostgresDialect{},
+		schema:    `sche"ma`,
+		table:     `security"rows`,
+		indexName: `idx"name`,
+		indexType: "btree",
+		wantUpdate: `update "sche""ma"."security""rows" set ` +
+			`"Value"=$1 where "ID"=$2;`,
+		wantCreateIndex: `create index "idx""name" on ` +
+			`"sche""ma"."security""rows" using btree ("ID");`,
+		wantDropIndex: `DROP INDEX "idx""name";`,
+	},
+	{
+		name:      "mysql",
+		dialect:   MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
+		schema:    "sche`ma",
+		table:     "security`rows",
+		indexName: "idx`name",
+		indexType: "Btree",
+		wantUpdate: "update `sche``ma`.`security``rows` set " +
+			"`Value`=? where `ID`=?;",
+		wantCreateIndex: "create index `idx``name` on " +
+			"`sche``ma`.`security``rows` (`ID`) using Btree;",
+		wantDropIndex: "DROP INDEX `idx``name` on " +
+			"`sche``ma`.`security``rows`;",
+	},
+}
+
+func addIdentifierIndexTable(dbmap *DbMap, tc identifierSQLCase) *TableMap {
+	table := dbmap.AddTableWithNameAndSchema(identifierIndexedRow{}, tc.schema, tc.table)
+	table.SetKeys(false, "ID")
+	table.AddIndex(tc.indexName, tc.indexType, []string{"ID"})
+	return table
+}
+
 func TestUpdateQuotesIdentifierMetadata(t *testing.T) {
-	type updatedRow struct {
-		ID    int64  `db:"ID"`
-		Value string `db:"Value"`
-	}
-
-	tests := []struct {
-		name    string
-		dialect Dialect
-		schema  string
-		table   string
-		want    string
-	}{
-		{
-			name:    "sqlite",
-			dialect: SqliteDialect{},
-			schema:  `sche"ma`,
-			table:   `security"rows`,
-			want:    `update "security""rows" set "Value"=? where "ID"=?;`,
-		},
-		{
-			name:    "postgres",
-			dialect: PostgresDialect{},
-			schema:  `sche"ma`,
-			table:   `security"rows`,
-			want:    `update "sche""ma"."security""rows" set "Value"=$1 where "ID"=$2;`,
-		},
-		{
-			name:    "mysql",
-			dialect: MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
-			schema:  "sche`ma",
-			table:   "security`rows",
-			want:    "update `sche``ma`.`security``rows` set `Value`=? where `ID`=?;",
-		},
-	}
-
-	for _, tc := range tests {
+	for _, tc := range identifierSQLCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dbmap := newIdentifierCaptureDbMap(t, tc.dialect)
-			table := dbmap.AddTableWithNameAndSchema(updatedRow{}, tc.schema, tc.table)
+			table := dbmap.AddTableWithNameAndSchema(identifierUpdatedRow{}, tc.schema, tc.table)
 			table.SetKeys(true, "ID")
 
-			_, err := dbmap.Update(context.Background(), &updatedRow{ID: 1, Value: "unused"})
+			_, err := dbmap.Update(
+				context.Background(),
+				&identifierUpdatedRow{ID: 1, Value: "unused"},
+			)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			requireIdentifierCapturedQuery(t, tc.want)
+			requireIdentifierCapturedQuery(t, tc.wantUpdate)
 		})
 	}
 }
 
 func TestCreateIndexQuotesIdentifierMetadata(t *testing.T) {
-	type indexedRow struct {
-		ID int64 `db:"ID"`
-	}
-
-	tests := []struct {
-		name      string
-		dialect   Dialect
-		schema    string
-		table     string
-		indexName string
-		indexType string
-		want      string
-	}{
-		{
-			name:      "sqlite",
-			dialect:   SqliteDialect{},
-			schema:    `sche"ma`,
-			table:     `security"rows`,
-			indexName: `idx"name`,
-			want:      `create index "idx""name" on "security""rows" ("ID");`,
-		},
-		{
-			name:      "postgres",
-			dialect:   PostgresDialect{},
-			schema:    `sche"ma`,
-			table:     `security"rows`,
-			indexName: `idx"name`,
-			indexType: "btree",
-			want:      `create index "idx""name" on "sche""ma"."security""rows" using btree ("ID");`,
-		},
-		{
-			name:      "mysql",
-			dialect:   MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
-			schema:    "sche`ma",
-			table:     "security`rows",
-			indexName: "idx`name",
-			indexType: "Btree",
-			want:      "create index `idx``name` on `sche``ma`.`security``rows` (`ID`) using Btree;",
-		},
-	}
-
-	for _, tc := range tests {
+	for _, tc := range identifierSQLCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dbmap := newIdentifierCaptureDbMap(t, tc.dialect)
-			table := dbmap.AddTableWithNameAndSchema(indexedRow{}, tc.schema, tc.table)
-			table.SetKeys(false, "ID")
-			table.AddIndex(tc.indexName, tc.indexType, []string{"ID"})
+			addIdentifierIndexTable(dbmap, tc)
 
 			err := dbmap.CreateIndex(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			requireIdentifierCapturedQuery(t, tc.want)
+			requireIdentifierCapturedQuery(t, tc.wantCreateIndex)
 		})
 	}
 }
 
 func TestDropIndexQuotesIdentifierMetadata(t *testing.T) {
-	type indexedRow struct {
-		ID int64 `db:"ID"`
-	}
-
-	tests := []struct {
-		name      string
-		dialect   Dialect
-		schema    string
-		table     string
-		indexName string
-		indexType string
-		want      string
-	}{
-		{
-			name:      "sqlite",
-			dialect:   SqliteDialect{},
-			schema:    `sche"ma`,
-			table:     `security"rows`,
-			indexName: `idx"name`,
-			want:      `DROP INDEX "idx""name";`,
-		},
-		{
-			name:      "postgres",
-			dialect:   PostgresDialect{},
-			schema:    `sche"ma`,
-			table:     `security"rows`,
-			indexName: `idx"name`,
-			indexType: "btree",
-			want:      `DROP INDEX "idx""name";`,
-		},
-		{
-			name:      "mysql",
-			dialect:   MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
-			schema:    "sche`ma",
-			table:     "security`rows",
-			indexName: "idx`name",
-			indexType: "Btree",
-			want:      "DROP INDEX `idx``name` on `sche``ma`.`security``rows`;",
-		},
-	}
-
-	for _, tc := range tests {
+	for _, tc := range identifierSQLCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dbmap := newIdentifierCaptureDbMap(t, tc.dialect)
-			table := dbmap.AddTableWithNameAndSchema(indexedRow{}, tc.schema, tc.table)
-			table.SetKeys(false, "ID")
-			table.AddIndex(tc.indexName, tc.indexType, []string{"ID"})
+			table := addIdentifierIndexTable(dbmap, tc)
 
 			err := table.DropIndex(context.Background(), tc.indexName)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			requireIdentifierCapturedQuery(t, tc.want)
+			requireIdentifierCapturedQuery(t, tc.wantDropIndex)
 		})
 	}
 }
