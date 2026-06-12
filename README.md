@@ -689,6 +689,13 @@ Valid `GORP_TEST_DIALECT` values are: "mysql"(for mymysql),
 `test_all.sh` script for examples of all 3 databases.  This is the
 script I run locally to test the library.
 
+## SQL Generation Review
+
+Changes that affect generated SQL, identifier quoting, mapper metadata, dialect
+behavior, or cached query plans should also consider
+[`docs/sql-generation-review.md`](docs/sql-generation-review.md). It records the main SQL
+synthesis invariants reviewers should keep in mind.
+
 
 ## Contributors
 
