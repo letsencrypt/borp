@@ -25,6 +25,49 @@ func TestSqliteDialectEscapesIdentifierQuotes(t *testing.T) {
 	}
 }
 
+func TestSqlForCreateQuotesSchemaIdentifier(t *testing.T) {
+	tests := []struct {
+		name    string
+		dialect Dialect
+		schema  string
+		want    string
+	}{
+		{
+			name:    "postgres",
+			dialect: PostgresDialect{},
+			schema:  `Mixed"Case`,
+			want: `create schema "Mixed""Case";create table ` +
+				`"Mixed""Case"."security_rows" ("ID" bigint) ;`,
+		},
+		{
+			name: "mysql",
+			dialect: MySQLDialect{
+				Engine:   "InnoDB",
+				Encoding: "UTF8",
+			},
+			schema: "Mixed`Case",
+			want: "create schema `Mixed``Case`;create table " +
+				"`Mixed``Case`.`security_rows` (`ID` bigint)  engine=InnoDB charset=UTF8;",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dbmap := &DbMap{Dialect: tc.dialect}
+			table := dbmap.AddTableWithNameAndSchema(
+				identifierIndexedRow{},
+				tc.schema,
+				"security_rows",
+			)
+
+			got := table.SqlForCreate(false)
+			if got != tc.want {
+				t.Fatalf("SqlForCreate() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestSqliteQuotedTableNameCannotRewriteUpdateTarget(t *testing.T) {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {

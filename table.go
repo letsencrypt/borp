@@ -175,7 +175,7 @@ func (t *TableMap) SqlForCreate(ifNotExists bool) string {
 		} else {
 			s.WriteString(schemaCreate)
 		}
-		s.WriteString(fmt.Sprintf(" %s;", t.SchemaName))
+		s.WriteString(fmt.Sprintf(" %s;", dialect.QuoteField(t.SchemaName)))
 	}
 
 	tableCreate := "create table"
